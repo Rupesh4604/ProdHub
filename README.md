@@ -130,3 +130,17 @@ ProdHub brings your goals, tasks, habits, and schedule into one powerful, secure
 Take the first step toward a more organized, focused, and productive life.
 
 **Start your journey with ProdHub today.**
+
+## Contact
+Created by: Rupesh Kumar Yadav Mediboyina 
+
+Email: rupesh32003@gmail.com
+
+GitHub: [Rupesh4604](https://github.com/Rupesh4604)
+
+LinkedIn: www.linkedin.com/in/mediboyina-rupesh-kumar-yadav-8b7a14205
+
+Page: [OpenSourceEnv Teamspace](https://www.notion.so/Teamspace-Home-913399bce8764b36ad8e928a0083af45)
+
+## License
+This project is licensed under the MIT License. For details, refer to the LICENSE.md file.
