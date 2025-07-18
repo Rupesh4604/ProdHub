@@ -5,14 +5,14 @@ import { getFirestore, collection, doc, addDoc, getDocs, updateDoc, deleteDoc, o
 import { Book, Calendar, CheckSquare, Clock, Edit2, Info, Plus, Repeat, Save, Sparkles, Tag, Trash2, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
+
 const firebaseConfig = {
-  apiKey: "AIzaSyASLN4rqavQ22nkN2qU8SB5BCC-fEDCmcE",
-  authDomain: "my-productivity-hub-5a3ba.firebaseapp.com",
-  projectId: "my-productivity-hub-5a3ba",
-  storageBucket: "my-productivity-hub-5a3ba.firebasestorage.app",
-  messagingSenderId: "407686262643",
-  appId: "1:407686262643:web:8815511693db5fe1c7df06",
-  measurementId: "G-TBVTVD4VQ4"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
 const appId = 'my-prod-hub';
