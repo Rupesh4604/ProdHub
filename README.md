@@ -1,70 +1,132 @@
-# Getting Started with Create React App
+## ProdHub: Empowering Your Productivity
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**Take control of your growth—professionally, personally, and daily.**  
+ProdHub is a modern, all-in-one web application built to help you organize, achieve, and grow. Seamlessly manage projects, tasks, habits, and your calendar from a single, intuitive platform—all with smart AI-powered features and robust security.
 
-## Available Scripts
+**Try ProdHub Now**  
+Explore a live demo: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)
 
-In the project directory, you can run:
+### Key Features
 
-### `npm start`
+**Dashboard Overview**  
+Get a snapshot of your productivity: overdue tasks, upcoming deadlines, and overall progress—all at a glance.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**Project Management**  
+Track everything from courses and conferences to personal projects. Each project gets its own page with a dynamic progress bar that updates as you complete tasks.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+**Task Management**  
+Break down projects into actionable steps. Set priorities (High, Medium, Low), due dates, and check off completed tasks with ease.
 
-### `npm test`
+**AI-Powered Planning**  
+ProdHub uses the Gemini API to generate smart task lists for new projects—optimized with your project title and synced Google Calendar events for context-aware suggestions.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+**Habit Tracker**  
+Build better routines. Set daily habits, check them off, and watch your consistency grow over time.
 
-### `npm run build`
+**Unified Schedule**  
+See all your project deadlines, task due dates, and Google Calendar events beautifully organized in one timeline—no more switching apps.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+**Secure Calendar Integration**  
+Sync your Google Calendar securely and privately. ProdHub only reads events—your data stays yours.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+**Persistent, Private Data**  
+Everything you add is saved in real time to your secure Firebase account, so your information is always up to date and accessible wherever you are.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+**Safe Sign-In**  
+Log in with Google or email. ProdHub prioritizes your privacy and security every step of the way.
 
-### `npm run eject`
+### Technology
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+ProdHub is built for speed, reliability, and a great user experience.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- **Frontend:** React.js
+- **Backend & Database:** Firebase (Firestore, Authentication)
+- **Styling:** Tailwind CSS
+- **AI Integration:** Google Gemini API
+- **Calendar Integration:** Google Calendar API via Google Identity Services
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Get Started with ProdHub
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Follow these steps to run ProdHub locally and customize it for your workflow.
 
-## Learn More
+#### Prerequisites
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **Node.js** (v18 or later): [Download Here](https://nodejs.org/)
+- **Firebase CLI** (install globally):  
+  `npm install -g firebase-tools`
+- **Google Account** (for Firebase and Google Cloud projects)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+#### 1. Clone the Repository
 
-### Code Splitting
+```sh
+git clone https://github.com/Rupesh4604/my-productivity-hub.git
+cd my-productivity-hub
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+#### 2. Install Dependencies
 
-### Analyzing the Bundle Size
+```sh
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+#### 3. Set Up Firebase
 
-### Making a Progressive Web App
+- **Create a Firebase project** at the [Firebase Console](https://console.firebase.google.com/).
+- **Enable Firestore:** Go to **Build > Firestore Database** and create a database in Production mode.
+- **Update Firestore Rules:** In the **Rules** tab, paste:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+  ```
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /artifacts/{appId}/users/{userId}/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+  ```
 
-### Advanced Configuration
+- **Enable Authentication:** Go to **Build > Authentication**, click **Get Started**, and enable Google and Email/Password sign-in.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+#### 4. Google Cloud Platform & API Keys
 
-### Deployment
+- **Google Calendar:**  
+  Enable the Google Calendar API, configure the OAuth consent screen, and get your Client ID using the project documentation.
+- **Gemini API:**  
+  Visit [Google AI Studio](https://aistudio.google.com/) to create and copy your Gemini API key.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+#### 5. Configure Environment Variables
 
-### `npm run build` fails to minify
+Create a `.env.local` file in your project root and add:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```env
+# FIREBASE CONFIGURATION
+REACT_APP_FIREBASE_API_KEY="YOUR_API_KEY"
+REACT_APP_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
+REACT_APP_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
+REACT_APP_FIREBASE_STORAGE_BUCKET="YOUR_STORAGE_BUCKET"
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID="YOUR_SENDER_ID"
+REACT_APP_FIREBASE_APP_ID="YOUR_APP_ID"
+
+# GOOGLE API KEYS
+REACT_APP_GOOGLE_CLIENT_ID="YOUR_GOOGLE_CLIENT_ID"
+REACT_APP_GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+```
+
+Update `src/App.js` to use these variables for your `firebaseConfig`.
+
+#### 6. Run and Deploy
+
+- **Start locally:**  
+  `npm start` (opens at `http://localhost:3000`)
+- **Build:**  
+  `npm run build`
+- **Deploy:**  
+  `firebase deploy` (ensure `firebase.json` is set to use the `build` folder)
+
+### Ready to Supercharge Your Productivity?
+
+ProdHub brings your goals, tasks, habits, and schedule into one powerful, secure, and intelligent hub.  
+Take the first step toward a more organized, focused, and productive life.
+
+**Start your journey with ProdHub today.**
