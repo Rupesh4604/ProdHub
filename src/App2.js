@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, addDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
-import { Book, Calendar, CheckSquare, Clock, Edit2, Info, Plus, Repeat, Save, Sparkles, Tag, Trash2, X } from 'lucide-react';
+import { Book, Calendar, CheckSquare, Clock, Edit2, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
-  apiKey: "AIzaSyASLN4rqavQ22nkN2qU8SB5BCC-fEDCmcE",
-  authDomain: "my-productivity-hub-5a3ba.firebaseapp.com",
-  projectId: "my-productivity-hub-5a3ba",
-  storageBucket: "my-productivity-hub-5a3ba.firebasestorage.app",
-  messagingSenderId: "407686262643",
-  appId: "1:407686262643:web:8815511693db5fe1c7df06",
-  measurementId: "G-TBVTVD4VQ4"
+  apiKey: "YOUR_API_KEY", // Replace with your actual key
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const appId = 'my-prod-hub';
@@ -43,39 +42,82 @@ const getLocalDateKey = (date) => {
     return d.toISOString().split('T')[0]; // YYYY-MM-DD
 };
 
-// --- New Component for Configuration Error ---
+// --- Configuration Error Component ---
 function ConfigurationNeeded({ missingFirebase, missingGoogle }) {
   return (
     <div className="flex items-center justify-center h-screen bg-gray-900 text-white p-8">
       <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-8 max-w-2xl text-center">
         <Info size={48} className="text-yellow-300 mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-yellow-200 mb-4">Configuration Required</h1>
-        {missingFirebase && (
-          <div className="text-left bg-gray-800 p-4 rounded-md mb-4">
-            <p className="text-gray-300 mb-2"><strong>Firebase Config Missing:</strong></p>
-            <ol className="list-decimal list-inside space-y-2 text-gray-400">
-              <li>Open <code className="bg-gray-700 px-1 py-0.5 rounded-md">src/App.js</code> and add your Firebase keys to the `firebaseConfig` object.</li>
-            </ol>
-          </div>
-        )}
-        {missingGoogle && (
-          <div className="text-left bg-gray-800 p-4 rounded-md">
-            <p className="text-gray-300 mb-2"><strong>Google Client ID Missing:</strong></p>
-            <ol className="list-decimal list-inside space-y-2 text-gray-400">
-              <li>Open the <code className="bg-gray-700 px-1 py-0.5 rounded-md">.env.local</code> file in your project root.</li>
-              <li>Add this line: <code className="bg-gray-700 px-1 py-0.5 rounded-md">REACT_APP_GOOGLE_CLIENT_ID="YOUR_CLIENT_ID"</code></li>
-            </ol>
-          </div>
-        )}
+        {missingFirebase && <div className="text-left bg-gray-800 p-4 rounded-md mb-4"><p className="text-gray-300 mb-2"><strong>Firebase Config Missing...</strong></p></div>}
+        {missingGoogle && <div className="text-left bg-gray-800 p-4 rounded-md"><p className="text-gray-300 mb-2"><strong>Google Client ID Missing...</strong></p></div>}
       </div>
     </div>
   );
 }
 
+// --- NEW Login Screen Component ---
+function LoginScreen() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isSigningUp, setIsSigningUp] = useState(false);
+
+    const handleGoogleSignIn = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            setError(error.message);
+            console.error("Google Sign-In Error:", error);
+        }
+    };
+
+    const handleEmailAuth = async (e) => {
+        e.preventDefault();
+        setError('');
+        try {
+            if (isSigningUp) {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } else {
+                await signInWithEmailAndPassword(auth, email, password);
+            }
+        } catch (error) {
+            setError(error.message);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+            <div className="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded-lg shadow-lg">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-blue-400">Welcome to ProdHub</h1>
+                    <p className="text-gray-400">Sign in to continue</p>
+                </div>
+                <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-red-600 hover:bg-red-700 rounded-md font-semibold transition-colors">
+                    <svg className="w-6 h-6" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
+                    Sign in with Google
+                </button>
+                <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-600"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-gray-800 text-gray-500">Or continue with</span></div></div>
+                <form onSubmit={handleEmailAuth} className="space-y-4">
+                    <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                    {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                    <button type="submit" className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-md font-semibold transition-colors">{isSigningUp ? 'Sign Up' : 'Sign In'}</button>
+                </form>
+                <p className="text-center text-sm text-gray-400">
+                    {isSigningUp ? 'Already have an account?' : "Don't have an account?"}
+                    <button onClick={() => setIsSigningUp(!isSigningUp)} className="font-medium text-blue-400 hover:underline ml-1">
+                        {isSigningUp ? 'Sign In' : 'Sign Up'}
+                    </button>
+                </p>
+            </div>
+        </div>
+    );
+}
+
 // This is the main content of your application
-function HubApp() {
-    const [userId, setUserId] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
+function HubApp({ user, handleSignOut }) {
     const [projects, setProjects] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [habits, setHabits] = useState([]);
@@ -94,41 +136,19 @@ function HubApp() {
         script.defer = true;
         script.onload = () => setIsGsiScriptLoaded(true);
         document.body.appendChild(script);
-        return () => {
-            document.body.removeChild(script);
-        };
+        return () => document.body.removeChild(script);
     }, []);
 
     useEffect(() => {
         if (isGsiScriptLoaded && window.google) {
-            const client = window.google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/calendar.readonly',
-                callback: '', 
-            });
+            const client = window.google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/calendar.readonly', callback: '' });
             setTokenClient(client);
         }
     }, [isGsiScriptLoaded]);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                setUserId(user.uid);
-            } else {
-                try {
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Anonymous sign-in failed:", error);
-                }
-            }
-            setIsAuthReady(true);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (!isAuthReady || !userId) return;
-        const projectsPath = `artifacts/${appId}/users/${userId}/projects`;
+        if (!user) return;
+        const projectsPath = `artifacts/${appId}/users/${user.uid}/projects`;
         const projectsQuery = query(collection(db, projectsPath));
         const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
             const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -138,13 +158,13 @@ function HubApp() {
                 setSelectedProjectId(null);
             }
         });
-        const tasksPath = `artifacts/${appId}/users/${userId}/tasks`;
+        const tasksPath = `artifacts/${appId}/users/${user.uid}/tasks`;
         const tasksQuery = query(collection(db, tasksPath));
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const habitsPath = `artifacts/${appId}/users/${userId}/habits`;
+        const habitsPath = `artifacts/${appId}/users/${user.uid}/habits`;
         const habitsQuery = query(collection(db, habitsPath));
         const unsubscribeHabits = onSnapshot(habitsQuery, (snapshot) => setHabits(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const habitEntriesPath = `artifacts/${appId}/users/${userId}/habit_entries`;
+        const habitEntriesPath = `artifacts/${appId}/users/${user.uid}/habit_entries`;
         const habitEntriesQuery = query(collection(db, habitEntriesPath));
         const unsubscribeHabitEntries = onSnapshot(habitEntriesQuery, (snapshot) => setHabitEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
         return () => {
@@ -153,7 +173,7 @@ function HubApp() {
             unsubscribeHabits();
             unsubscribeHabitEntries();
         };
-    }, [isAuthReady, userId, selectedProjectId]);
+    }, [user, selectedProjectId]);
 
     const selectedProject = useMemo(() => projects.find(p => p.id === selectedProjectId), [selectedProjectId, projects]);
     const handleSetView = (view, projectId = null) => {
@@ -161,13 +181,9 @@ function HubApp() {
         setSelectedProjectId(projectId);
     };
 
-    if (!isAuthReady) {
-        return <div className="flex items-center justify-center h-screen bg-gray-900 text-white"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div></div>;
-    }
-
     return (
         <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
-            <Sidebar onViewChange={handleSetView} projects={projects} userId={userId} />
+            <Sidebar onViewChange={handleSetView} projects={projects} userId={user.uid} handleSignOut={handleSignOut} />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
                 {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} />}
                 {activeView === 'project' && selectedProject && <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />}
@@ -181,14 +197,34 @@ function HubApp() {
 
 // --- Top-Level App Component (Handles Conditional Logic) ---
 export default function App() {
+    const [user, setUser] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setIsAuthReady(true);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleSignOut = async () => {
+        await signOut(auth);
+    };
+
     if (!isFirebaseConfigured || !GOOGLE_CLIENT_ID) {
         return <ConfigurationNeeded missingFirebase={!isFirebaseConfigured} missingGoogle={!GOOGLE_CLIENT_ID} />;
     }
-    return <HubApp />;
+
+    if (!isAuthReady) {
+        return <div className="flex items-center justify-center h-screen bg-gray-900 text-white"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div></div>;
+    }
+
+    return user ? <HubApp user={user} handleSignOut={handleSignOut} /> : <LoginScreen />;
 }
 
 // --- Components ---
-function Sidebar({ onViewChange, projects, userId }) {
+function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
     const [isAddingProject, setIsAddingProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectType, setNewProjectType] = useState('Course');
@@ -197,41 +233,44 @@ function Sidebar({ onViewChange, projects, userId }) {
         e.preventDefault();
         if (!newProjectName.trim() || !userId) return;
         const project = { name: newProjectName, type: newProjectType, createdAt: new Date(), status: 'In Progress', progress: 0 };
-        const projectsPath = `artifacts/${appId}/users/${userId}/projects`;
-        await addDoc(collection(db, projectsPath), project);
+        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/projects`), project);
         setNewProjectName('');
         setIsAddingProject(false);
     };
 
     return (
-        <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col space-y-6">
-            <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
-            <div className="text-xs text-gray-500 truncate">User ID: {userId}</div>
-            <nav className="flex-1 space-y-2">
-                <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
-                <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
-                <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
-                <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
-                <div className="pt-4">
-                    <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
-                    {projects.map(p => (
-                        <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
-                           <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
-                           {p.name}
-                        </button>
-                    ))}
-                    <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
-                    {isAddingProject && (
-                        <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
-                            <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <select value={newProjectType} onChange={e => setNewProjectType(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
-                            </select>
-                            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">Save</button>
-                        </form>
-                    )}
-                </div>
-            </nav>
+        <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
+            <div className="space-y-6 flex-1">
+                <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
+                <nav className="space-y-2">
+                    <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
+                    <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
+                    <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
+                    <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
+                    <div className="pt-4">
+                        <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
+                        {projects.map(p => (
+                            <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
+                               <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
+                               {p.name}
+                            </button>
+                        ))}
+                        <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
+                        {isAddingProject && (
+                            <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
+                                <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <select value={newProjectType} onChange={e => setNewProjectType(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
+                                </select>
+                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">Save</button>
+                            </form>
+                        )}
+                    </div>
+                </nav>
+            </div>
+            <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-red-900/50 hover:text-red-300 transition-colors mt-4">
+                <LogOut size={20} /> Sign Out
+            </button>
         </aside>
     );
 }
@@ -402,9 +441,7 @@ function ProjectDetail({ project, allTasks, syncedEvents }) {
             {editingProject ? (
                 <form onSubmit={handleUpdateProject} className="flex items-center gap-4 bg-gray-800 p-4 rounded-lg">
                     <input type="text" value={editingProject.name} onChange={e => setEditingProject({...editingProject, name: e.target.value})} className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <select value={editingProject.type} onChange={e => setEditingProject({...editingProject, type: e.target.value})} className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
-                    </select>
+                    <select value={editingProject.type} onChange={e => setEditingProject({...editingProject, type: e.target.value})} className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"><option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option></select>
                     <button type="submit" className="p-2 bg-green-600 hover:bg-green-700 rounded-md"><Save size={20} /></button>
                     <button onClick={() => setEditingProject(null)} className="p-2 bg-gray-600 hover:bg-gray-700 rounded-md"><X size={20} /></button>
                 </form>
