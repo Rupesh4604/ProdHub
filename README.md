@@ -4,7 +4,7 @@
 ProdHub is a modern, all-in-one web application built to help you organize, achieve, and grow. Seamlessly manage projects, tasks, habits, and your calendar from a single, intuitive platform—all with smart AI-powered features and robust security.
 
 **Try ProdHub Now**  
-Explore a live demo: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)
+We are available at: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)
 
 ![ProdHub](images/sheduler.png)
 
@@ -20,7 +20,7 @@ Track everything from courses and conferences to personal projects. Each project
 Break down projects into actionable steps. Set priorities (High, Medium, Low), due dates, and check off completed tasks with ease.
 
 **AI-Powered Planning**  
-ProdHub uses the Gemini API to generate smart task lists for new projects—optimized with your project title and synced Google Calendar events for context-aware suggestions.
+ProdHub uses the Gemini API to generate smart task lists for new projects—optimized with your project title and synced Google Calendar events for context-aware suggestions. (Google Gemini 2.5 Pro Integrated)
 
 **Habit Tracker**  
 Build better routines. Set daily habits, check them off, and watch your consistency grow over time.
@@ -133,16 +133,18 @@ Take the first step toward a more organized, focused, and productive life.
 
 **Start your journey with ProdHub today.**
 
-## Contact
-Created by: Rupesh Kumar Yadav Mediboyina 
+## Our Organization
 
-Email: rupesh32003@gmail.com
+OpenSourceEnv is a dedicated initiative focused on democratizing access to high-quality education in various domains of technology. Our mission is to provide comprehensive resources that empower learners at all levels to master new skills and technologies. We are committed to fostering an inclusive learning environment where everyone can thrive.
 
-GitHub: [Rupesh4604](https://github.com/Rupesh4604)
+Community Page: [OpenSourceEnv Teamspace](https://www.notion.so/Teamspace-Home-913399bce8764b36ad8e928a0083af45)
 
-LinkedIn: www.linkedin.com/in/mediboyina-rupesh-kumar-yadav-8b7a14205
-
-Page: [OpenSourceEnv Teamspace](https://www.notion.so/Teamspace-Home-913399bce8764b36ad8e928a0083af45)
+Github: https://github.com/openSourceEnv
 
 ## License
-This project is licensed under the MIT License. For details, refer to the LICENSE.md file.
+This project is licensed under the MIT License. For details, refer to the LICENSE.md file. You can find terms & conditions and other privacy related details at [prodhub-info](https://github.com/Rupesh4604/prodhub-info/tree/main).
+
+## Contact
+Created by: Rupesh Kumar Yadav Mediboyina, Email: rupesh32003@gmail.com
+
+LinkedIn: www.linkedin.com/in/mediboyina-rupesh-kumar-yadav-8b7a14205
