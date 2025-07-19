@@ -6,6 +6,8 @@ ProdHub is a modern, all-in-one web application built to help you organize, achi
 **Try ProdHub Now**  
 Explore a live demo: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)
 
+![ProdHub](images/sheduler.png)
+
 ### Key Features
 
 **Dashboard Overview**  
