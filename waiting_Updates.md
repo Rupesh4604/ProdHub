@@ -1,6 +1,6 @@
 ## Enhancing Existing Features
 
-**Habit Tracker Streaks & Analytics:**
+**Habit Tracker Streaks & Analytics:** ✅
 
 Streaks: Automatically calculate and display how many consecutive days a user has completed a habit. This is a huge motivator.
 
@@ -22,17 +22,17 @@ Allow users to break down a large task into smaller, manageable sub-tasks. Each 
 
 Integrate a classic Pomodoro timer (25 minutes of focus, 5 minutes of break) directly into the app. You could even link a timer session to a specific task to track how much focus time you're dedicating to it.
 
-**Weekly Review & Summary:**
+**Weekly Review & Summary:** ✅
 
 Create a "Weekly Review" page that automatically summarizes what you've accomplished: how many tasks you completed, which projects saw the most progress, and your habit consistency score.
 
 ## AI-Powered Enhancements
 
-**AI-Powered Goal Decomposition:**
+**AI-Powered Goal Decomposition:** ✅
 
 Instead of just generating tasks for an existing project, you could have an AI feature that helps you create the project itself. You could give it a high-level goal like "Learn web development" and it could suggest creating several projects (e.g., "Project 1: Build a Portfolio Website," "Project 2: Create a To-Do App") and then generate the tasks for each.
 
-**AI Daily Planner:**
+**AI Daily Planner:** ✅ (partially avaliable)
 
 Add a button on the dashboard called "Plan My Day." The AI would look at your overdue tasks, high-priority tasks for today, and your synced calendar events, and then suggest a prioritized schedule for you to follow.
 
