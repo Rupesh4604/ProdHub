@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
+import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -138,6 +138,7 @@ function HubApp({ user, handleSignOut }) {
     const [projects, setProjects] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [habits, setHabits] = useState([]);
+    const [goals, setGoals] = useState([]);
     const [habitEntries, setHabitEntries] = useState([]);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -174,7 +175,6 @@ function HubApp({ user, handleSignOut }) {
         const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
             const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setProjects(projectsData);
-            // If the selected project is deleted, navigate back to the dashboard
             if (selectedProjectId && !snapshot.docs.some(doc => doc.id === selectedProjectId)) {
                 setActiveView('dashboard');
                 setSelectedProjectId(null);
@@ -187,6 +187,9 @@ function HubApp({ user, handleSignOut }) {
         const habitsQuery = query(collection(db, `${basePath}/habits`));
         const unsubscribeHabits = onSnapshot(habitsQuery, (snapshot) => setHabits(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
 
+        const goalsQuery = query(collection(db, `${basePath}/goals`));
+        const unsubscribeGoals = onSnapshot(goalsQuery, (snapshot) => setGoals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+
         const habitEntriesQuery = query(collection(db, `${basePath}/habit_entries`));
         const unsubscribeHabitEntries = onSnapshot(habitEntriesQuery, (snapshot) => setHabitEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
 
@@ -195,6 +198,7 @@ function HubApp({ user, handleSignOut }) {
             unsubscribeProjects();
             unsubscribeTasks();
             unsubscribeHabits();
+            unsubscribeGoals();
             unsubscribeHabitEntries();
         };
     }, [user, selectedProjectId]); // Re-run if user changes
@@ -208,7 +212,7 @@ function HubApp({ user, handleSignOut }) {
 
     return (
         <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
-            <Sidebar onViewChange={handleSetView} projects={projects} userId={user.uid} handleSignOut={handleSignOut} />
+            <Sidebar onViewChange={handleSetView} projects={projects} goals={goals} userId={user.uid} handleSignOut={handleSignOut} />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
                 {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} />}
                 {activeView === 'project' && selectedProject && <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />}
@@ -256,15 +260,16 @@ export default function App() {
 }
 
 // --- Components ---
-function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
+function Sidebar({ onViewChange, projects, goals, userId, handleSignOut }) {
     const [isAddingProject, setIsAddingProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectType, setNewProjectType] = useState('Course');
+    const [showGoalModal, setShowGoalModal] = useState(false);
 
     const handleAddProject = async (e) => {
         e.preventDefault();
         if (!newProjectName.trim() || !userId || !db) return;
-        const project = { name: newProjectName, type: newProjectType, createdAt: new Date(), status: 'In Progress', progress: 0 };
+        const project = { name: newProjectName, type: newProjectType, createdAt: new Date(), status: 'In Progress', progress: 0, goalId: null };
         try {
             await addDoc(collection(db, `artifacts/${appId}/users/${userId}/projects`), project);
             setNewProjectName('');
@@ -274,41 +279,131 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
         }
     };
 
+    const { standaloneProjects, goalProjects } = useMemo(() => {
+        const standalone = projects.filter(p => !p.goalId);
+        const grouped = projects.reduce((acc, project) => {
+            if (project.goalId) {
+                (acc[project.goalId] = acc[project.goalId] || []).push(project);
+            }
+            return acc;
+        }, {});
+        return { standaloneProjects: standalone, goalProjects: grouped };
+    }, [projects]);
+
+
     return (
-        <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
-            <div className="space-y-6 flex-1">
-                <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
-                <nav className="space-y-2">
-                    <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
-                    <button onClick={() => onViewChange('weekly_review')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><TrendingUp size={20} /> Weekly Review</button>
-                    <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
-                    <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
-                    <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
-                    <div className="pt-4">
-                        <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
-                        {projects.map(p => (
-                            <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
-                               <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
-                               {p.name}
-                            </button>
-                        ))}
-                        <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
-                        {isAddingProject && (
-                            <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
-                                <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <select value={newProjectType} onChange={e => setNewProjectType(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
-                                </select>
-                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">Save</button>
-                            </form>
-                        )}
-                    </div>
-                </nav>
+        <>
+            <GoalPlannerModal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} userId={userId} />
+            <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
+                <div className="space-y-6 flex-1 overflow-y-auto">
+                    <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
+                    <nav className="space-y-2">
+                        <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
+                        <button onClick={() => onViewChange('weekly_review')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><TrendingUp size={20} /> Weekly Review</button>
+                        <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
+                        <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
+                        <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
+                        
+                        <div className="pt-4">
+                            <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Goals</h2>
+                             <button onClick={() => setShowGoalModal(true)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-purple-400 hover:bg-purple-900/50 transition-colors"><Sparkles size={20} /> AI Goal Planner</button>
+                            {goals.map(goal => (
+                                <GoalDropdown key={goal.id} goal={goal} projects={goalProjects[goal.id] || []} onViewChange={onViewChange} userId={userId} />
+                            ))}
+                        </div>
+
+                        <div className="pt-4">
+                            <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
+                            {standaloneProjects.map(p => (
+                                <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
+                                   <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
+                                   {p.name}
+                                </button>
+                            ))}
+                            <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
+                            {isAddingProject && (
+                                <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
+                                    <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <select value={newProjectType} onChange={e => setNewProjectType(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
+                                    </select>
+                                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">Save</button>
+                                </form>
+                            )}
+                        </div>
+                    </nav>
+                </div>
+                <button onClick={handleSignOut} className="w-full flex-shrink-0 flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-red-900/50 hover:text-red-300 transition-colors mt-4">
+                    <LogOut size={20} /> Sign Out
+                </button>
+            </aside>
+        </>
+    );
+}
+
+function GoalDropdown({ goal, projects, onViewChange, userId }) {
+    const [isOpen, setIsOpen] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState(goal.name);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        if (!editedName.trim()) return;
+        await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/goals`, goal.id), { name: editedName });
+        setIsEditing(false);
+    };
+
+    const handleDelete = async () => {
+        if (!userId || !db) return;
+        setShowDeleteModal(false);
+        const batch = writeBatch(db);
+
+        // Delete the goal
+        batch.delete(doc(db, `artifacts/${appId}/users/${userId}/goals`, goal.id));
+
+        // Delete all projects and tasks associated with the goal
+        for (const project of projects) {
+            batch.delete(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id));
+            const tasksQuery = query(collection(db, `artifacts/${appId}/users/${userId}/tasks`), where("projectId", "==", project.id));
+            const tasksSnapshot = await getDocs(tasksQuery);
+            tasksSnapshot.forEach(taskDoc => batch.delete(taskDoc.ref));
+        }
+        await batch.commit();
+    };
+
+    return (
+        <div className="text-sm">
+            <ConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={handleDelete} title="Delete Goal" message={`Are you sure you want to delete the goal "${goal.name}" and all its projects and tasks?`} />
+            <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-gray-700/50 group">
+                {isEditing ? (
+                    <form onSubmit={handleUpdate} className="flex-grow flex items-center gap-2">
+                        <input value={editedName} onChange={(e) => setEditedName(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                        <button type="submit" className="p-1 text-green-400 hover:text-white"><Save size={16} /></button>
+                    </form>
+                ) : (
+                    <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 flex-grow text-left">
+                        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        <span className="font-semibold text-gray-200 truncate">{goal.name}</span>
+                    </button>
+                )}
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setIsEditing(true)} className="p-1 text-gray-400 hover:text-white"><Edit2 size={16} /></button>
+                    <button onClick={() => setShowDeleteModal(true)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={16} /></button>
+                </div>
             </div>
-            <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-red-900/50 hover:text-red-300 transition-colors mt-4">
-                <LogOut size={20} /> Sign Out
-            </button>
-        </aside>
+            {isOpen && (
+                <div className="pl-6 border-l-2 border-gray-700 ml-5 my-1">
+                    {projects.map(p => (
+                        <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
+                            <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
+                            {p.name}
+                        </button>
+                    ))}
+                     {projects.length === 0 && <p className="px-3 py-1.5 text-xs text-gray-500">No projects yet.</p>}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -1083,6 +1178,152 @@ function AiContextModal({ isOpen, onClose, onConfirm }) {
                     </button>
                     <button onClick={handleConfirm} className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 font-semibold text-white transition-colors">
                         Generate Tasks
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function GoalPlannerModal({ isOpen, onClose, userId }) {
+    const [goal, setGoal] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleGeneratePlan = async () => {
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        if (!apiKey) {
+            setError("Gemini API key is not configured.");
+            return;
+        }
+        if (!goal.trim()) {
+            setError("Please enter a goal.");
+            return;
+        }
+        setIsGenerating(true);
+        setError('');
+
+        const prompt = `You are an expert project planner. A user has a high-level goal: "${goal}". 
+        
+        Your task is to decompose this goal into a series of 2 to 4 smaller, actionable projects. For each project, you must also generate a list of 3 to 5 specific tasks to complete it.
+        
+        The output must be a JSON object. For each project, provide a 'name' and a 'type' (e.g., "Course", "Personal", "Bootcamp"). For each task, provide a 'title' and a 'priority' ('High', 'Medium', or 'Low').`;
+
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        projects: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    name: { type: "STRING" },
+                                    type: { type: "STRING", enum: ["Course", "Conference", "Seminar", "Bootcamp", "Personal"] },
+                                    tasks: {
+                                        type: "ARRAY",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                title: { type: "STRING" },
+                                                priority: { type: "STRING", enum: ["High", "Medium", "Low"] }
+                                            },
+                                            required: ["title", "priority"]
+                                        }
+                                    }
+                                },
+                                required: ["name", "type", "tasks"]
+                            }
+                        }
+                    },
+                    required: ["projects"]
+                }
+            }
+        };
+
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates[0].content.parts[0].text) {
+                const plan = JSON.parse(result.candidates[0].content.parts[0].text);
+                if (plan.projects && plan.projects.length > 0) {
+                    const batch = writeBatch(db);
+                    
+                    // 1. Create the Goal
+                    const goalRef = doc(collection(db, `artifacts/${appId}/users/${userId}/goals`));
+                    batch.set(goalRef, { name: goal, createdAt: new Date() });
+
+                    // 2. Create Projects and Tasks
+                    plan.projects.forEach(proj => {
+                        const projectRef = doc(collection(db, `artifacts/${appId}/users/${userId}/projects`));
+                        batch.set(projectRef, {
+                            name: proj.name,
+                            type: proj.type,
+                            goalId: goalRef.id,
+                            createdAt: new Date(),
+                            status: 'In Progress',
+                            progress: 0
+                        });
+
+                        proj.tasks.forEach(task => {
+                            const taskRef = doc(collection(db, `artifacts/${appId}/users/${userId}/tasks`));
+                            batch.set(taskRef, {
+                                ...task,
+                                projectId: projectRef.id,
+                                completed: false,
+                                createdAt: new Date(),
+                                dueDate: ''
+                            });
+                        });
+                    });
+
+                    await batch.commit();
+                    setGoal('');
+                    onClose();
+                } else {
+                    throw new Error("The AI did not generate any projects for this goal.");
+                }
+            } else {
+                throw new Error("Received an invalid response from the AI.");
+            }
+        } catch (e) {
+            console.error("AI Goal Planner Error:", e);
+            setError(e.message || "An unexpected error occurred.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-white">AI Goal Planner</h2>
+                    <button onClick={onClose} className="p-1 text-gray-400 hover:text-white"><X size={24} /></button>
+                </div>
+                <p className="text-gray-300 mb-4">Describe a high-level goal, and the AI will break it down into actionable projects and tasks for you.</p>
+                <textarea
+                    value={goal}
+                    onChange={(e) => setGoal(e.target.value)}
+                    placeholder="e.g., Learn web development in 6 months"
+                    className="w-full h-28 bg-gray-700 border border-gray-600 rounded-md p-3 text-base focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+                <div className="flex justify-end gap-4 mt-6">
+                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 font-semibold transition-colors">
+                        Cancel
+                    </button>
+                    <button onClick={handleGeneratePlan} disabled={isGenerating} className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 font-semibold text-white transition-colors flex items-center gap-2 disabled:bg-purple-800 disabled:cursor-not-allowed">
+                        {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Sparkles size={18} />}
+                        {isGenerating ? 'Generating Plan...' : 'Generate Plan'}
                     </button>
                 </div>
             </div>
