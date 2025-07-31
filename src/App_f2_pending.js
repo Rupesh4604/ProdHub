@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, addDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
-import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
+import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X, Zap } from 'lucide-react';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -194,7 +194,7 @@ function HubApp({ user, handleSignOut }) {
         <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
             <Sidebar onViewChange={handleSetView} projects={projects} userId={user.uid} handleSignOut={handleSignOut} />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} />}
+                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} syncedEvents={syncedEvents} />}
                 {activeView === 'project' && selectedProject && <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />}
                 {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
                 {activeView === 'schedule' && <ScheduleView projects={projects} tasks={tasks} syncedEvents={syncedEvents} setSyncedEvents={setSyncedEvents} tokenClient={tokenClient} />}
@@ -238,6 +238,7 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
     const [isAddingProject, setIsAddingProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectType, setNewProjectType] = useState('Course');
+    const [showGoalModal, setShowGoalModal] = useState(false);
 
     const handleAddProject = async (e) => {
         e.preventDefault();
@@ -249,77 +250,146 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
     };
 
     return (
-        <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
-            <div className="space-y-6 flex-1">
-                <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
-                <nav className="space-y-2">
-                    <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
-                    <button onClick={() => onViewChange('weekly_review')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><TrendingUp size={20} /> Weekly Review</button>
-                    <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
-                    <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
-                    <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
-                    <div className="pt-4">
-                        <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
-                        {projects.map(p => (
-                            <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
-                               <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
-                               {p.name}
+        <>
+            <GoalDecompositionModal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} userId={userId} />
+            <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
+                <div className="space-y-6 flex-1">
+                    <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
+                    <nav className="space-y-2">
+                        <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
+                        <button onClick={() => onViewChange('weekly_review')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><TrendingUp size={20} /> Weekly Review</button>
+                        <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
+                        <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
+                        <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
+                        <div className="pt-4">
+                            <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
+                            <button onClick={() => setShowGoalModal(true)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-purple-400 hover:bg-purple-900/50 transition-colors">
+                                <Zap size={20} /> AI Goal Planner
                             </button>
-                        ))}
-                        <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
-                        {isAddingProject && (
-                            <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
-                                <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <select value={newProjectType} onChange={e => setNewProjectType(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
-                                </select>
-                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">Save</button>
-                            </form>
-                        )}
-                    </div>
-                </nav>
-            </div>
-            <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-red-900/50 hover:text-red-300 transition-colors mt-4">
-                <LogOut size={20} /> Sign Out
-            </button>
-        </aside>
+                            {projects.map(p => (
+                                <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
+                                   <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
+                                   {p.name}
+                                </button>
+                            ))}
+                            <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
+                            {isAddingProject && (
+                                <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
+                                    <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <select value={newProjectType} onChange={e => setNewProjectType(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option>Course</option><option>Conference</option><option>Seminar</option><option>Bootcamp</option><option>Personal</option>
+                                    </select>
+                                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">Save</button>
+                                </form>
+                            )}
+                        </div>
+                    </nav>
+                </div>
+                <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-red-900/50 hover:text-red-300 transition-colors mt-4">
+                    <LogOut size={20} /> Sign Out
+                </button>
+            </aside>
+        </>
     );
 }
 
-function Dashboard({ projects, tasks, onViewChange }) {
+function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
+    const [showPlannerModal, setShowPlannerModal] = useState(false);
+    const [dailyPlan, setDailyPlan] = useState('');
+    const [isPlanning, setIsPlanning] = useState(false);
+    
     const today = new Date();
     today.setHours(0,0,0,0);
     const upcomingTasks = tasks.filter(t => !t.completed && t.dueDate).map(t => ({...t, dueDateObj: new Date(t.dueDate)})).filter(t => t.dueDateObj >= today).sort((a, b) => a.dueDateObj - b.dueDateObj).slice(0, 5);
     const overdueTasks = tasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < today);
 
+    const handlePlanMyDay = async () => {
+        setIsPlanning(true);
+        setShowPlannerModal(true);
+        setDailyPlan('');
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        if (!apiKey) {
+            setDailyPlan("Error: Gemini API key is not configured.");
+            setIsPlanning(false);
+            return;
+        }
+
+        const todayKey = getLocalDateKey(new Date());
+        const highPriorityToday = tasks.filter(t => !t.completed && t.priority === 'High' && t.dueDate === todayKey);
+        const calendarEventsToday = syncedEvents.filter(e => getLocalDateKey(e.date) === todayKey);
+
+        let context = "Here is my situation for today:\n";
+        if (overdueTasks.length > 0) {
+            context += `- I have these overdue tasks: ${overdueTasks.map(t => t.title).join(', ')}\n`;
+        }
+        if (highPriorityToday.length > 0) {
+            context += `- I have these high-priority tasks for today: ${highPriorityToday.map(t => t.title).join(', ')}\n`;
+        }
+        if (calendarEventsToday.length > 0) {
+            context += `- I have these calendar events: ${calendarEventsToday.map(e => `${e.title} at ${formatTime(e.date)}`).join(', ')}\n`;
+        }
+
+        let prompt;
+        if (overdueTasks.length === 0 && highPriorityToday.length === 0 && calendarEventsToday.length === 0) {
+            prompt = "My schedule is clear today. Suggest one proactive and impactful task I could do to get ahead on my projects or personal growth. Be encouraging and specific.";
+        } else {
+             prompt = `${context}\nBased on this, create a short, prioritized action plan for my day. Give me a list of 3-5 bullet points telling me what to focus on first to be most effective. Be encouraging and direct.`;
+        }
+        
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+            if (!response.ok) throw new Error("API request failed");
+            const result = await response.json();
+            if (result.candidates && result.candidates[0].content.parts[0].text) {
+                setDailyPlan(result.candidates[0].content.parts[0].text);
+            } else {
+                throw new Error("Invalid response from AI.");
+            }
+        } catch (error) {
+            setDailyPlan("Sorry, I couldn't generate a plan right now. Please try again later.");
+        } finally {
+            setIsPlanning(false);
+        }
+    };
+
     return (
-        <div className="space-y-8">
-            <h1 className="text-4xl font-bold text-white">Dashboard</h1>
-            {overdueTasks.length > 0 && (
-                <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
-                    <h2 className="text-xl font-semibold text-red-300 mb-3">Overdue Tasks ({overdueTasks.length})</h2>
-                    <div className="space-y-2">{overdueTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div>
+        <>
+            <DailyPlannerModal isOpen={showPlannerModal} onClose={() => setShowPlannerModal(false)} plan={dailyPlan} isLoading={isPlanning} />
+            <div className="space-y-8">
+                <div className="flex flex-wrap gap-4 justify-between items-center">
+                    <h1 className="text-4xl font-bold text-white">Dashboard</h1>
+                    <button onClick={handlePlanMyDay} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-semibold transition-colors">
+                        <Sparkles size={18} /> Plan My Day
+                    </button>
                 </div>
-            )}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
-                    <h2 className="text-2xl font-semibold text-gray-200">Upcoming Deadlines</h2>
-                    {upcomingTasks.length > 0 ? <div className="space-y-3">{upcomingTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div> : <p className="text-gray-400">No upcoming deadlines. Great job!</p>}
-                </div>
-                <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
-                    <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
-                    <div className="space-y-4">
-                        {projects.length > 0 ? projects.map(p => (
-                            <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
-                                <div className="flex justify-between items-center mb-1"><span className="font-medium text-gray-300">{p.name}</span><span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span></div>
-                                <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
-                            </div>
-                        )) : <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+                
+                {overdueTasks.length > 0 && (
+                    <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
+                        <h2 className="text-xl font-semibold text-red-300 mb-3">Overdue Tasks ({overdueTasks.length})</h2>
+                        <div className="space-y-2">{overdueTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div>
+                    </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
+                        <h2 className="text-2xl font-semibold text-gray-200">Upcoming Deadlines</h2>
+                        {upcomingTasks.length > 0 ? <div className="space-y-3">{upcomingTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div> : <p className="text-gray-400">No upcoming deadlines. Great job!</p>}
+                    </div>
+                    <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
+                        <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
+                        <div className="space-y-4">
+                            {projects.length > 0 ? projects.map(p => (
+                                <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
+                                    <div className="flex justify-between items-center mb-1"><span className="font-medium text-gray-300">{p.name}</span><span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span></div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
+                                </div>
+                            )) : <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+                        </div>
                     </div>
                 </div>
+                <DailyReminder />
             </div>
-            <DailyReminder />
-        </div>
+        </>
     );
 }
 
@@ -941,6 +1011,122 @@ function AiContextModal({ isOpen, onClose, onConfirm }) {
                     <button onClick={handleConfirm} className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 font-semibold text-white transition-colors">
                         Generate Tasks
                     </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- NEW AI Modals ---
+function DailyPlannerModal({ isOpen, onClose, plan, isLoading }) {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+                <h2 className="text-2xl font-bold text-white mb-4">Your Daily Plan</h2>
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
+                    </div>
+                ) : (
+                    <div className="text-gray-300 whitespace-pre-wrap">{plan}</div>
+                )}
+                <div className="flex justify-end gap-4 mt-6">
+                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 font-semibold transition-colors">Close</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function GoalDecompositionModal({ isOpen, onClose, userId }) {
+    const [goal, setGoal] = useState('');
+    const [plan, setPlan] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleGeneratePlan = async () => {
+        if (!goal.trim()) return;
+        setIsLoading(true);
+        setError('');
+        setPlan(null);
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        if (!apiKey) {
+            setError("Gemini API key is not configured.");
+            setIsLoading(false);
+            return;
+        }
+
+        const prompt = `My high-level goal is to "${goal}". Break this down into 2-4 distinct, actionable projects that I can track. For each project, provide a concise "name" and a suitable "type" from this list: Course, Conference, Seminar, Bootcamp, Personal.`;
+        
+        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { projects: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, type: { type: "STRING", enum: ["Course", "Conference", "Seminar", "Bootcamp", "Personal"] } }, required: ["name", "type"] } } }, required: ["projects"] } } };
+        
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+            const result = await response.json();
+            if (result.candidates && result.candidates[0].content.parts[0].text) {
+                const generated = JSON.parse(result.candidates[0].content.parts[0].text);
+                setPlan(generated.projects);
+            } else {
+                throw new Error("No plan was generated.");
+            }
+        } catch (err) {
+            setError(err.message || "An error occurred while generating the plan.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleAddProjects = async () => {
+        if (!plan || !userId) return;
+        for (const project of plan) {
+            const newProject = { name: project.name, type: project.type, createdAt: new Date(), status: 'In Progress', progress: 0 };
+            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/projects`), newProject);
+        }
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4">
+                <h2 className="text-2xl font-bold text-white mb-4">AI Goal Planner</h2>
+                {!plan && !isLoading && (
+                    <>
+                        <p className="text-gray-300 mb-4">Enter a high-level goal, and the AI will suggest a series of projects to help you achieve it.</p>
+                        <textarea value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g., Learn Python for data science..." className="w-full h-24 bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </>
+                )}
+                {isLoading && (
+                    <div className="flex justify-center items-center h-48"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div></div>
+                )}
+                {error && <div className="text-red-400 bg-red-900/50 p-3 rounded-md my-4">{error}</div>}
+                {plan && !isLoading && (
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-200 mb-3">Suggested Projects:</h3>
+                        <div className="space-y-2">
+                            {plan.map((p, index) => (
+                                <div key={index} className="bg-gray-900/50 p-3 rounded-md flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
+                                    <div>
+                                        <p className="font-medium text-gray-200">{p.name}</p>
+                                        <p className="text-xs text-gray-400">{p.type}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <div className="flex justify-end gap-4 mt-6">
+                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 font-semibold transition-colors">Cancel</button>
+                    {plan && !isLoading ? (
+                        <button onClick={handleAddProjects} className="px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 font-semibold text-white transition-colors">Add Projects to Hub</button>
+                    ) : (
+                        <button onClick={handleGeneratePlan} disabled={isLoading} className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 font-semibold text-white transition-colors disabled:bg-purple-800">Generate Plan</button>
+                    )}
                 </div>
             </div>
         </div>
