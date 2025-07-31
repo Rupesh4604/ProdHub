@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, addDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
-import { Book, Calendar, CheckSquare, Clock, Edit2, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, X } from 'lucide-react';
+import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -36,22 +36,14 @@ const formatDate = (date) => {
     return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(d);
 };
 
-// --- NEW Time Formatting Helper ---
 const formatTime = (date) => {
     if (!date) return '';
     const d = new Date(date);
-    // Google Calendar API returns just a date for all-day events, which JS interprets as midnight UTC.
-    // A simple check for midnight can help identify these.
     if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0) {
         return 'All-day';
     }
-    return new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    }).format(d);
+    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
 };
-
 
 const getLocalDateKey = (date) => {
     const d = new Date(date);
@@ -207,6 +199,7 @@ function HubApp({ user, handleSignOut }) {
                 {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
                 {activeView === 'schedule' && <ScheduleView projects={projects} tasks={tasks} syncedEvents={syncedEvents} setSyncedEvents={setSyncedEvents} tokenClient={tokenClient} />}
                 {activeView === 'habit_tracker' && <HabitTrackerView habits={habits} entries={habitEntries} />}
+                {activeView === 'weekly_review' && <WeeklyReviewView tasks={tasks} projects={projects} habits={habits} entries={habitEntries} />}
             </main>
         </div>
     );
@@ -261,6 +254,7 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
                 <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
                 <nav className="space-y-2">
                     <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
+                    <button onClick={() => onViewChange('weekly_review')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><TrendingUp size={20} /> Weekly Review</button>
                     <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
                     <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
                     <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
@@ -607,7 +601,7 @@ function TaskItem({ task, projects = [], isCompact = false }) {
 
     const handleToggleComplete = async () => {
         if (!userId) return;
-        await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), { completed: !task.completed });
+        await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), { completed: !task.completed, completedAt: !task.completed ? new Date() : null });
     };
 
     const handleUpdate = async (e) => {
@@ -680,6 +674,7 @@ function TaskItem({ task, projects = [], isCompact = false }) {
 function HabitTrackerView({ habits, entries }) {
     const [newHabitName, setNewHabitName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
+    const [showAnalytics, setShowAnalytics] = useState(false);
     const userId = auth.currentUser?.uid;
 
     const handleAddHabit = async (e) => {
@@ -690,81 +685,198 @@ function HabitTrackerView({ habits, entries }) {
         setIsAdding(false);
     };
     
-    const groupedEntries = useMemo(() => {
-        return entries.reduce((acc, entry) => {
-            if (!acc[entry.date]) acc[entry.date] = [];
-            acc[entry.date].push(entry);
-            return acc;
-        }, {});
-    }, [entries]);
+    const habitStreaks = useMemo(() => {
+        const streaks = {};
+        habits.forEach(habit => {
+            const habitEntries = entries
+                .filter(e => e.habitId === habit.id && e.completed)
+                .map(e => e.date)
+                .sort((a, b) => new Date(b) - new Date(a));
+            
+            let currentStreak = 0;
+            if (habitEntries.length > 0) {
+                const today = new Date();
+                const todayKey = getLocalDateKey(today);
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayKey = getLocalDateKey(yesterday);
 
-    const todayKey = getLocalDateKey(new Date());
-    if (!groupedEntries[todayKey] && habits.length > 0) {
-        groupedEntries[todayKey] = [];
-    }
-    
-    const sortedDateKeys = Object.keys(groupedEntries).sort((a, b) => new Date(b) - new Date(a));
+                if (habitEntries[0] === todayKey || habitEntries[0] === yesterdayKey) {
+                    currentStreak = 1;
+                    for (let i = 0; i < habitEntries.length - 1; i++) {
+                        const current = new Date(habitEntries[i]);
+                        const next = new Date(habitEntries[i+1]);
+                        const diff = (current - next) / (1000 * 60 * 60 * 24);
+                        if (diff === 1) {
+                            currentStreak++;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            streaks[habit.id] = currentStreak;
+        });
+        return streaks;
+    }, [habits, entries]);
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-4xl font-bold text-white">Habit Tracker</h1>
-                <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md font-semibold transition-colors"><Plus size={18} /> {isAdding ? 'Cancel' : 'New Habit'}</button>
+                <div className="flex gap-2">
+                    <button onClick={() => setShowAnalytics(!showAnalytics)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-md font-semibold transition-colors">
+                        <TrendingUp size={18} /> {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+                    </button>
+                    <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md font-semibold transition-colors">
+                        <Plus size={18} /> {isAdding ? 'Cancel' : 'New Habit'}
+                    </button>
+                </div>
             </div>
+
             {isAdding && (
                 <form onSubmit={handleAddHabit} className="flex gap-2 p-4 bg-gray-800 rounded-lg">
                     <input type="text" value={newHabitName} onChange={e => setNewHabitName(e.target.value)} placeholder="e.g., Read for 30 minutes" className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                     <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-semibold">Save</button>
                 </form>
             )}
+
+            {showAnalytics && (
+                <div className="bg-gray-800/60 rounded-lg p-6">
+                    <h2 className="text-2xl font-semibold mb-4">Habit Analytics</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       {habits.map(habit => <HabitCalendar key={habit.id} habit={habit} entries={entries.filter(e => e.habitId === habit.id)} />)}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {habits.length === 0 && !isAdding && (<p className="text-gray-400 md:col-span-3 text-center py-8">No habits defined yet. Add your first one!</p>)}
-                {sortedDateKeys.map(dateKey => (<HabitDayCard key={dateKey} dateKey={dateKey} habits={habits} entries={groupedEntries[dateKey] || []} />))}
+                {habits.map(habit => (<HabitDayCard key={habit.id} habit={habit} entries={entries.filter(e => e.habitId === habit.id)} streak={habitStreaks[habit.id] || 0} />))}
             </div>
         </div>
     );
 }
 
-function HabitDayCard({ dateKey, habits, entries }) {
+function HabitDayCard({ habit, entries, streak }) {
     const userId = auth.currentUser?.uid;
+    const todayKey = getLocalDateKey(new Date());
+    const entry = entries.find(e => e.date === todayKey);
+    const isCompleted = entry ? entry.completed : false;
 
-    const handleHabitToggle = async (habitId, isCompleted) => {
+    const handleHabitToggle = async () => {
         if (!userId) return;
-        const entryQuery = query(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), where("habitId", "==", habitId), where("date", "==", dateKey));
-        const existingEntries = await getDocs(entryQuery);
-        if (existingEntries.empty) {
-            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), { habitId, date: dateKey, completed: isCompleted });
+        if (entry) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habit_entries`, entry.id), { completed: !isCompleted });
         } else {
-            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habit_entries`, existingEntries.docs[0].id), { completed: isCompleted });
+            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), { habitId: habit.id, date: todayKey, completed: true });
         }
     };
 
-    const displayDate = useMemo(() => {
-        const today = getLocalDateKey(new Date());
-        const yesterday = getLocalDateKey(new Date(Date.now() - 86400000));
-        if (dateKey === today) return "Today";
-        if (dateKey === yesterday) return "Yesterday";
-        return formatDate(new Date(dateKey));
-    }, [dateKey]);
+    return (
+        <div className="bg-gray-800/60 rounded-lg p-4 space-y-3 flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+                <span className="font-semibold text-white">{habit.name}</span>
+                <div className={`flex items-center gap-1 text-sm ${streak > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
+                    <Flame size={16} />
+                    <span>{streak}</span>
+                </div>
+            </div>
+            <button onClick={handleHabitToggle} className={`w-full py-2 rounded-md font-semibold transition-colors ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
+                {isCompleted ? "Completed Today!" : "Mark as Done"}
+            </button>
+        </div>
+    );
+}
+
+function HabitCalendar({ habit, entries }) {
+    const today = new Date();
+    const [date, setDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+    const completedDates = useMemo(() => new Set(entries.filter(e => e.completed).map(e => e.date)), [entries]);
+
+    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
     return (
-        <div className="bg-gray-800/60 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-white">{displayDate}</h3>
-            <div className="space-y-2">
-                {habits.map(habit => {
-                    const entry = entries.find(e => e.habitId === habit.id);
-                    const isCompleted = entry ? entry.completed : false;
+        <div className="bg-gray-900/50 p-4 rounded-lg">
+            <h3 className="font-semibold text-center mb-2">{habit.name} - {date.toLocaleString('default', { month: 'long' })}</h3>
+            <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-400">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d}>{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1 mt-2">
+                {blanks.map(b => <div key={`b-${b}`}></div>)}
+                {days.map(d => {
+                    const dateKey = getLocalDateKey(new Date(date.getFullYear(), date.getMonth(), d));
+                    const isCompleted = completedDates.has(dateKey);
+                    const isToday = dateKey === getLocalDateKey(new Date());
                     return (
-                        <div key={habit.id} className="flex items-center gap-3">
-                            <button onClick={() => handleHabitToggle(habit.id, !isCompleted)}>
-                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isCompleted ? 'bg-green-500 border-green-500' : 'border-gray-500 hover:border-gray-400'}`}>
-                                    {isCompleted && <CheckSquare size={16} className="text-white" />}
-                                </div>
-                            </button>
-                            <span className={`text-gray-300 ${isCompleted ? 'line-through text-gray-500' : ''}`}>{habit.name}</span>
+                        <div key={d} className={`w-8 h-8 flex items-center justify-center rounded-full text-sm ${isCompleted ? 'bg-green-500 text-white' : 'bg-gray-700'} ${isToday ? 'ring-2 ring-blue-500' : ''}`}>
+                            {d}
                         </div>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+function WeeklyReviewView({ tasks, projects, habits, entries }) {
+    const lastWeek = useMemo(() => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
+        return { start, end };
+    }, []);
+
+    const completedTasks = tasks.filter(t => t.completed && t.completedAt && t.completedAt.toDate() >= lastWeek.start);
+    
+    const habitConsistency = useMemo(() => {
+        if (habits.length === 0) return 0;
+        const last7Days = Array.from({length: 7}, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return getLocalDateKey(d);
+        });
+        
+        let totalPossible = habits.length * 7;
+        let totalCompleted = 0;
+        
+        last7Days.forEach(dateKey => {
+            habits.forEach(habit => {
+                if (entries.some(e => e.habitId === habit.id && e.date === dateKey && e.completed)) {
+                    totalCompleted++;
+                }
+            });
+        });
+        return totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+    }, [habits, entries]);
+
+    return (
+        <div className="space-y-8">
+            <h1 className="text-4xl font-bold text-white">Weekly Review</h1>
+            <p className="text-gray-400">Summary of your activity from {formatDate(lastWeek.start)} to {formatDate(lastWeek.end)}.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-800/60 p-6 rounded-lg text-center">
+                    <p className="text-gray-400 text-sm">Tasks Completed</p>
+                    <p className="text-5xl font-bold text-green-400">{completedTasks.length}</p>
+                </div>
+                 <div className="bg-gray-800/60 p-6 rounded-lg text-center">
+                    <p className="text-gray-400 text-sm">Habit Consistency</p>
+                    <p className="text-5xl font-bold text-orange-400">{habitConsistency}%</p>
+                </div>
+            </div>
+
+            <div className="bg-gray-800/60 p-6 rounded-lg">
+                <h2 className="text-2xl font-semibold mb-4">Completed Tasks This Week</h2>
+                {completedTasks.length > 0 ? (
+                    <div className="space-y-2">
+                        {completedTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact />)}
+                    </div>
+                ) : <p className="text-gray-400">No tasks completed this week. Let's get to it!</p>}
             </div>
         </div>
     );
@@ -801,7 +913,6 @@ function ConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
     );
 }
 
-// --- NEW AI Context Modal ---
 function AiContextModal({ isOpen, onClose, onConfirm }) {
     const [context, setContext] = useState('');
 
