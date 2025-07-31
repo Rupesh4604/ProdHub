@@ -12,10 +12,6 @@ Add a dedicated "Notes" tab within each project where you can jot down ideas, st
 
 Allow users to add a list of relevant links (e.g., to documentation, articles, or tutorials) for each project.
 
-**Sub-Tasks:**
-
-Allow users to break down a large task into smaller, manageable sub-tasks. Each sub-task could have its own checkbox, and completing all of them would complete the main task.
-
 ## New Major Features
 
 **A Pomodoro Timer:**
