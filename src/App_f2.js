@@ -17,11 +17,10 @@ const firebaseConfig = {
 const appId = 'my-prod-hub';
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || "";
 
-// --- Firebase Initialization ---
 let app;
 let auth;
 let db;
-const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY";
 
 if (isFirebaseConfigured) {
     app = initializeApp(firebaseConfig);
@@ -194,7 +193,7 @@ function HubApp({ user, handleSignOut }) {
         <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
             <Sidebar onViewChange={handleSetView} projects={projects} userId={user.uid} handleSignOut={handleSignOut} />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} syncedEvents={syncedEvents} />}
+                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} syncedEvents={syncedEvents} habits={habits} />}
                 {activeView === 'project' && selectedProject && <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />}
                 {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
                 {activeView === 'schedule' && <ScheduleView projects={projects} tasks={tasks} syncedEvents={syncedEvents} setSyncedEvents={setSyncedEvents} tokenClient={tokenClient} />}
@@ -239,6 +238,17 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectType, setNewProjectType] = useState('Course');
     const [showGoalModal, setShowGoalModal] = useState(false);
+    const [expandedGoals, setExpandedGoals] = useState({});
+
+    const { parentProjects, childProjects } = useMemo(() => {
+        const parents = projects.filter(p => !p.parentId);
+        const children = projects.filter(p => p.parentId);
+        return { parentProjects: parents, childProjects: children };
+    }, [projects]);
+
+    const toggleGoal = (goalId) => {
+        setExpandedGoals(prev => ({ ...prev, [goalId]: !prev[goalId] }));
+    };
 
     const handleAddProject = async (e) => {
         e.preventDefault();
@@ -266,12 +276,38 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
                             <button onClick={() => setShowGoalModal(true)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-purple-400 hover:bg-purple-900/50 transition-colors">
                                 <Zap size={20} /> AI Goal Planner
                             </button>
-                            {projects.map(p => (
-                                <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
-                                   <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
-                                   {p.name}
-                                </button>
-                            ))}
+                            {parentProjects.map(p => {
+                                const children = childProjects.filter(c => c.parentId === p.id);
+                                if (p.type === 'Goal') {
+                                    return (
+                                        <div key={p.id}>
+                                            <button onClick={() => toggleGoal(p.id)} className="w-full text-left flex items-center justify-between gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
+                                                <span className="flex items-center gap-3">
+                                                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                                                    {p.name}
+                                                </span>
+                                                {expandedGoals[p.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                            </button>
+                                            {expandedGoals[p.id] && (
+                                                <div className="pl-6 border-l-2 border-gray-700 ml-4">
+                                                    {children.map(c => (
+                                                        <button key={c.id} onClick={() => onViewChange('project', c.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-gray-700/50 transition-colors truncate">
+                                                            <div className={`w-2 h-2 rounded-full ${c.type === 'Course' ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                                                            {c.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <button key={p.id} onClick={() => onViewChange('project', p.id)} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate">
+                                       <div className={`w-2 h-2 rounded-full ${p.type === 'Course' ? 'bg-green-400' : p.type === 'Seminar' ? 'bg-purple-400' : 'bg-yellow-400'}`}></div>
+                                       {p.name}
+                                    </button>
+                                );
+                            })}
                             <button onClick={() => setIsAddingProject(!isAddingProject)} className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"><Plus size={20} /> Add Project</button>
                             {isAddingProject && (
                                 <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
@@ -293,7 +329,7 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
     );
 }
 
-function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
+function Dashboard({ projects, tasks, onViewChange, syncedEvents, habits }) {
     const [showPlannerModal, setShowPlannerModal] = useState(false);
     const [dailyPlan, setDailyPlan] = useState('');
     const [isPlanning, setIsPlanning] = useState(false);
@@ -317,23 +353,20 @@ function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
         const todayKey = getLocalDateKey(new Date());
         const highPriorityToday = tasks.filter(t => !t.completed && t.priority === 'High' && t.dueDate === todayKey);
         const calendarEventsToday = syncedEvents.filter(e => getLocalDateKey(e.date) === todayKey);
+        const recentCompleted = tasks.filter(t => t.completed && t.completedAt && (new Date() - t.completedAt.toDate()) < 2 * 24 * 60 * 60 * 1000); // last 2 days
 
         let context = "Here is my situation for today:\n";
-        if (overdueTasks.length > 0) {
-            context += `- I have these overdue tasks: ${overdueTasks.map(t => t.title).join(', ')}\n`;
-        }
-        if (highPriorityToday.length > 0) {
-            context += `- I have these high-priority tasks for today: ${highPriorityToday.map(t => t.title).join(', ')}\n`;
-        }
-        if (calendarEventsToday.length > 0) {
-            context += `- I have these calendar events: ${calendarEventsToday.map(e => `${e.title} at ${formatTime(e.date)}`).join(', ')}\n`;
-        }
+        if (overdueTasks.length > 0) context += `- Overdue tasks: ${overdueTasks.map(t => t.title).join(', ')}\n`;
+        if (highPriorityToday.length > 0) context += `- High-priority tasks for today: ${highPriorityToday.map(t => t.title).join(', ')}\n`;
+        if (calendarEventsToday.length > 0) context += `- Calendar events: ${calendarEventsToday.map(e => `${e.title} at ${formatTime(e.date)}`).join(', ')}\n`;
+        if (habits.length > 0) context += `- Habits I'm tracking: ${habits.map(h => h.name).join(', ')}\n`;
+        if (recentCompleted.length > 0) context += `- I recently completed: ${recentCompleted.map(t => t.title).join(', ')}\n`;
 
         let prompt;
         if (overdueTasks.length === 0 && highPriorityToday.length === 0 && calendarEventsToday.length === 0) {
-            prompt = "My schedule is clear today. Suggest one proactive and impactful task I could do to get ahead on my projects or personal growth. Be encouraging and specific.";
+            prompt = `My schedule is clear today. I am tracking these habits: ${habits.map(h => h.name).join(', ')}. Suggest one proactive and impactful task I could do to get ahead on my projects or personal growth. Be encouraging and specific.`;
         } else {
-             prompt = `${context}\nBased on this, create a short, prioritized action plan for my day. Give me a list of 3-5 bullet points telling me what to focus on first to be most effective. Be encouraging and direct.`;
+             prompt = `${context}\nBased on everything, create a short, prioritized action plan for my day. Give me a list of 3-4 bullet points telling me what to focus on first to be most effective. Start with the most critical item. Keep it short, actionable, and motivational. Frame it as a suggestion (e.g., 'Let's start by tackling...').`;
         }
         
         try {
@@ -378,12 +411,13 @@ function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
                     <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
                         <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
                         <div className="space-y-4">
-                            {projects.length > 0 ? projects.map(p => (
+                            {projects.filter(p => !p.parentId).map(p => (
                                 <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
                                     <div className="flex justify-between items-center mb-1"><span className="font-medium text-gray-300">{p.name}</span><span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span></div>
                                     <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
                                 </div>
-                            )) : <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+                            ))}
+                             {projects.length === 0 && <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
                         </div>
                     </div>
                 </div>
