@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
@@ -581,9 +581,35 @@ function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenCli
     };
     
     const allEvents = useMemo(() => {
-        const projectEvents = projects.map(p => ({ id: `proj-${p.id}`, title: p.name, date: p.deadline ? new Date(p.deadline) : null, type: 'Project Deadline', color: 'bg-purple-500' }));
-        const taskEvents = tasks.map(t => ({ id: `task-${t.id}`, title: t.title, date: t.dueDate ? new Date(t.dueDate) : null, type: 'Task Deadline', color: 'bg-green-500' }));
-        return [...projectEvents, ...taskEvents, ...syncedEvents].filter(e => e.date && !isNaN(e.date)).sort((a, b) => a.date - b.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of today for accurate overdue comparison
+
+        const projectEvents = projects.map(p => ({
+            id: `proj-${p.id}`,
+            title: p.name,
+            date: p.deadline ? new Date(p.deadline) : null,
+            type: 'Project Deadline',
+            color: 'bg-purple-500'
+        }));
+
+        const taskEvents = tasks
+            .filter(t => !t.completed) // 1. Filter out completed tasks
+            .map(t => {
+                const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+                const isOverdue = dueDate && dueDate < today; // 2. Check if task is overdue
+                return {
+                    id: `task-${t.id}`,
+                    title: t.title,
+                    date: dueDate,
+                    type: 'Task Deadline',
+                    color: isOverdue ? 'bg-red-700' : 'bg-green-500', // 3. Assign color based on overdue status
+                    isOverdue: isOverdue
+                };
+            });
+
+        return [...projectEvents, ...taskEvents, ...syncedEvents]
+            .filter(e => e.date && !isNaN(e.date))
+            .sort((a, b) => a.date - b.date);
     }, [projects, tasks, syncedEvents]);
 
     return (
@@ -610,6 +636,7 @@ function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenCli
                                 <p className="font-semibold text-gray-200">{event.title}</p>
                                 <p className="text-sm text-gray-400">
                                     {event.type}
+                                    {event.isOverdue && <span className="font-semibold text-red-400"> (Overdue)</span>}
                                     {event.type === 'Google Calendar' && ` at ${formatTime(event.date)}`}
                                 </p>
                             </div>
@@ -789,6 +816,9 @@ function HabitTrackerView({ habits, entries }) {
 }
 
 function HabitDayCard({ habit, entries, streak }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState(habit.name);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const userId = auth.currentUser?.uid;
     const todayKey = getLocalDateKey(new Date());
     const entry = entries.find(e => e.date === todayKey);
@@ -803,19 +833,89 @@ function HabitDayCard({ habit, entries, streak }) {
         }
     };
 
+    const handleUpdateHabit = async (e) => {
+        e.preventDefault();
+        if (!editedName.trim() || !userId || !db) return;
+        const habitRef = doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id);
+        try {
+            await updateDoc(habitRef, { name: editedName });
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Error updating habit:", error);
+        }
+    };
+
+    const handleDeleteHabit = async () => {
+        if (!userId || !db) return;
+        setShowDeleteModal(false);
+        
+        const entriesPath = `artifacts/${appId}/users/${userId}/habit_entries`;
+        const q = query(collection(db, entriesPath), where("habitId", "==", habit.id));
+        
+        try {
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            querySnapshot.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+
+            const habitRef = doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id);
+            await deleteDoc(habitRef);
+        } catch (error) {
+            console.error("Error deleting habit and its entries:", error);
+        }
+    };
+
     return (
-        <div className="bg-gray-800/60 rounded-lg p-4 space-y-3 flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-                <span className="font-semibold text-white">{habit.name}</span>
-                <div className={`flex items-center gap-1 text-sm ${streak > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
-                    <Flame size={16} />
-                    <span>{streak}</span>
-                </div>
+        <>
+            <ConfirmModal 
+                isOpen={showDeleteModal} 
+                onClose={() => setShowDeleteModal(false)} 
+                onConfirm={handleDeleteHabit} 
+                title="Delete Habit" 
+                message={`Are you sure you want to delete the habit "${habit.name}"? All its tracked history will also be removed.`} 
+            />
+            <div className="bg-gray-800/60 rounded-lg p-4 flex flex-col justify-between min-h-[160px]">
+                {isEditing ? (
+                    <form onSubmit={handleUpdateHabit} className="flex-grow flex flex-col space-y-2">
+                        <input 
+                            type="text" 
+                            value={editedName} 
+                            onChange={e => setEditedName(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            autoFocus
+                        />
+                        <div className="flex gap-2 mt-auto">
+                            <button type="submit" className="flex-1 p-1.5 text-sm bg-green-600 hover:bg-green-700 rounded-md font-semibold">Save</button>
+                            <button type="button" onClick={() => setIsEditing(false)} className="flex-1 p-1.5 text-sm bg-gray-600 hover:bg-gray-700 rounded-md font-semibold">Cancel</button>
+                        </div>
+                    </form>
+                ) : (
+                    <div className="flex-grow flex flex-col">
+                        <div className="flex justify-between items-start">
+                            <span className="font-semibold text-white pr-2">{habit.name}</span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => setIsEditing(true)} className="p-1 text-gray-400 hover:text-white rounded-md hover:bg-gray-700"><Edit2 size={16} /></button>
+                                <button onClick={() => setShowDeleteModal(true)} className="p-1 text-gray-400 hover:text-red-400 rounded-md hover:bg-gray-700"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+                        <div className={`flex items-center gap-1 text-sm mt-2 ${streak > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
+                            <Flame size={16} />
+                            <span>{streak} day streak</span>
+                        </div>
+                    </div>
+                )}
+                
+                <button 
+                    onClick={handleHabitToggle} 
+                    disabled={isEditing}
+                    className={`w-full mt-4 py-2 rounded-md font-semibold transition-colors ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'} disabled:bg-gray-800 disabled:cursor-not-allowed`}
+                >
+                    {isCompleted ? "Completed Today!" : "Mark as Done"}
+                </button>
             </div>
-            <button onClick={handleHabitToggle} className={`w-full py-2 rounded-md font-semibold transition-colors ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
-                {isCompleted ? "Completed Today!" : "Mark as Done"}
-            </button>
-        </div>
+        </>
     );
 }
 

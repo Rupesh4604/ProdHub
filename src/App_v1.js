@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, doc, addDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
-import { Book, Calendar, CheckSquare, Clock, Edit2, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, X } from 'lucide-react';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
+// It's recommended to store these in environment variables
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -21,40 +22,40 @@ const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || "";
 let app;
 let auth;
 let db;
-const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+// A simple check to see if the config is placeholder or not
+const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY";
 
 if (isFirebaseConfigured) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+    }
 }
 
 // --- Helper Functions ---
 const formatDate = (date) => {
     if (!date) return 'N/A';
+    // Handles both Firestore Timestamps and JS Date objects
     const d = date instanceof Date ? date : date.toDate();
     return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(d);
 };
 
-// --- NEW Time Formatting Helper ---
 const formatTime = (date) => {
     if (!date) return '';
     const d = new Date(date);
-    // Google Calendar API returns just a date for all-day events, which JS interprets as midnight UTC.
-    // A simple check for midnight can help identify these.
+    // Check if it's an all-day event (time is midnight UTC)
     if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0) {
         return 'All-day';
     }
-    return new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    }).format(d);
+    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
 };
-
 
 const getLocalDateKey = (date) => {
     const d = new Date(date);
+    // Adjust for timezone offset to get the correct local date
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0]; // YYYY-MM-DD
 };
@@ -66,8 +67,8 @@ function ConfigurationNeeded({ missingFirebase, missingGoogle }) {
       <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-8 max-w-2xl text-center">
         <Info size={48} className="text-yellow-300 mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-yellow-200 mb-4">Configuration Required</h1>
-        {missingFirebase && <div className="text-left bg-gray-800 p-4 rounded-md mb-4"><p className="text-gray-300 mb-2"><strong>Firebase Config Missing...</strong></p></div>}
-        {missingGoogle && <div className="text-left bg-gray-800 p-4 rounded-md"><p className="text-gray-300 mb-2"><strong>Google Client ID Missing...</strong></p></div>}
+        {missingFirebase && <div className="text-left bg-gray-800 p-4 rounded-md mb-4"><p className="text-gray-300 mb-2"><strong>Firebase Config Missing:</strong> Please ensure your Firebase environment variables (REACT_APP_FIREBASE_*) are set correctly in your <code>.env.local</code> file.</p></div>}
+        {missingGoogle && <div className="text-left bg-gray-800 p-4 rounded-md"><p className="text-gray-300 mb-2"><strong>Google Client ID Missing:</strong> Please ensure REACT_APP_GOOGLE_CLIENT_ID is set in your <code>.env.local</code> file to enable Google Calendar sync.</p></div>}
       </div>
     </div>
   );
@@ -146,6 +147,7 @@ function HubApp({ user, handleSignOut }) {
     const [tokenClient, setTokenClient] = useState(null);
     const [isGsiScriptLoaded, setIsGsiScriptLoaded] = useState(false);
 
+    // Effect to load the Google Sign-In script
     useEffect(() => {
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
@@ -156,43 +158,50 @@ function HubApp({ user, handleSignOut }) {
         return () => document.body.removeChild(script);
     }, []);
 
+    // Effect to initialize the Google token client once the script is loaded
     useEffect(() => {
-        if (isGsiScriptLoaded && window.google) {
+        if (isGsiScriptLoaded && window.google && GOOGLE_CLIENT_ID) {
             const client = window.google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/calendar.readonly', callback: '' });
             setTokenClient(client);
         }
     }, [isGsiScriptLoaded]);
 
+    // Effect to subscribe to Firestore data
     useEffect(() => {
-        if (!user) return;
-        const projectsPath = `artifacts/${appId}/users/${user.uid}/projects`;
-        const projectsQuery = query(collection(db, projectsPath));
+        if (!user || !db) return;
+        const basePath = `artifacts/${appId}/users/${user.uid}`;
+
+        const projectsQuery = query(collection(db, `${basePath}/projects`));
         const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
             const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setProjects(projectsData);
+            // If the selected project is deleted, navigate back to the dashboard
             if (selectedProjectId && !snapshot.docs.some(doc => doc.id === selectedProjectId)) {
                 setActiveView('dashboard');
                 setSelectedProjectId(null);
             }
         });
-        const tasksPath = `artifacts/${appId}/users/${user.uid}/tasks`;
-        const tasksQuery = query(collection(db, tasksPath));
+
+        const tasksQuery = query(collection(db, `${basePath}/tasks`));
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const habitsPath = `artifacts/${appId}/users/${user.uid}/habits`;
-        const habitsQuery = query(collection(db, habitsPath));
+        
+        const habitsQuery = query(collection(db, `${basePath}/habits`));
         const unsubscribeHabits = onSnapshot(habitsQuery, (snapshot) => setHabits(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const habitEntriesPath = `artifacts/${appId}/users/${user.uid}/habit_entries`;
-        const habitEntriesQuery = query(collection(db, habitEntriesPath));
+
+        const habitEntriesQuery = query(collection(db, `${basePath}/habit_entries`));
         const unsubscribeHabitEntries = onSnapshot(habitEntriesQuery, (snapshot) => setHabitEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+
+        // Cleanup subscriptions on component unmount
         return () => {
             unsubscribeProjects();
             unsubscribeTasks();
             unsubscribeHabits();
             unsubscribeHabitEntries();
         };
-    }, [user, selectedProjectId]);
+    }, [user, selectedProjectId]); // Re-run if user changes
 
     const selectedProject = useMemo(() => projects.find(p => p.id === selectedProjectId), [selectedProjectId, projects]);
+    
     const handleSetView = (view, projectId = null) => {
         setActiveView(view);
         setSelectedProjectId(projectId);
@@ -207,6 +216,7 @@ function HubApp({ user, handleSignOut }) {
                 {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
                 {activeView === 'schedule' && <ScheduleView projects={projects} tasks={tasks} syncedEvents={syncedEvents} setSyncedEvents={setSyncedEvents} tokenClient={tokenClient} />}
                 {activeView === 'habit_tracker' && <HabitTrackerView habits={habits} entries={habitEntries} />}
+                {activeView === 'weekly_review' && <WeeklyReviewView tasks={tasks} projects={projects} habits={habits} entries={habitEntries} />}
             </main>
         </div>
     );
@@ -218,6 +228,10 @@ export default function App() {
     const [isAuthReady, setIsAuthReady] = useState(false);
 
     useEffect(() => {
+        if (!auth) {
+            setIsAuthReady(true); // If firebase isn't configured, we can't check auth
+            return;
+        }
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             setIsAuthReady(true);
@@ -226,7 +240,9 @@ export default function App() {
     }, []);
 
     const handleSignOut = async () => {
-        await signOut(auth);
+        if(auth) {
+            await signOut(auth);
+        }
     };
 
     if (!isFirebaseConfigured || !GOOGLE_CLIENT_ID) {
@@ -248,11 +264,15 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
 
     const handleAddProject = async (e) => {
         e.preventDefault();
-        if (!newProjectName.trim() || !userId) return;
+        if (!newProjectName.trim() || !userId || !db) return;
         const project = { name: newProjectName, type: newProjectType, createdAt: new Date(), status: 'In Progress', progress: 0 };
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/projects`), project);
-        setNewProjectName('');
-        setIsAddingProject(false);
+        try {
+            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/projects`), project);
+            setNewProjectName('');
+            setIsAddingProject(false);
+        } catch (error) {
+            console.error("Error adding project:", error);
+        }
     };
 
     return (
@@ -261,6 +281,7 @@ function Sidebar({ onViewChange, projects, userId, handleSignOut }) {
                 <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2"><Book size={24} /> ProdHub</h1>
                 <nav className="space-y-2">
                     <button onClick={() => onViewChange('dashboard')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> Dashboard</button>
+                    <button onClick={() => onViewChange('weekly_review')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><TrendingUp size={20} /> Weekly Review</button>
                     <button onClick={() => onViewChange('habit_tracker')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Repeat size={20} /> Habit Tracker</button>
                     <button onClick={() => onViewChange('all_tasks')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><CheckSquare size={20} /> All Tasks</button>
                     <button onClick={() => onViewChange('schedule')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"><Calendar size={20} /> Schedule</button>
@@ -341,8 +362,9 @@ function ProjectDetail({ project, allTasks, syncedEvents }) {
     const userId = auth.currentUser?.uid;
     const tasks = useMemo(() => allTasks.filter(t => t.projectId === project.id), [allTasks, project.id]);
 
+    // Effect to update project progress when tasks change
     useEffect(() => {
-        if (!userId || !project) return;
+        if (!userId || !project || !db) return;
         const completedTasks = tasks.filter(t => t.completed).length;
         const totalTasks = tasks.length;
         const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -354,7 +376,7 @@ function ProjectDetail({ project, allTasks, syncedEvents }) {
     
     const handleAddTask = async (e) => {
         e.preventDefault();
-        if (!newTask.title.trim() || !userId) return;
+        if (!newTask.title.trim() || !userId || !db) return;
         const task = { ...newTask, projectId: project.id, completed: false, createdAt: new Date() };
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/tasks`), task);
         setNewTask({ title: '', dueDate: '', priority: 'Medium' });
@@ -363,14 +385,15 @@ function ProjectDetail({ project, allTasks, syncedEvents }) {
 
     const handleUpdateProject = async (e) => {
         e.preventDefault();
-        if (!editingProject.name.trim() || !userId) return;
+        if (!editingProject.name.trim() || !userId || !db) return;
         await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id), { name: editingProject.name, type: editingProject.type });
         setEditingProject(null);
     };
     
     const handleDeleteProject = async () => {
-        if (!userId) return;
+        if (!userId || !db) return;
         setShowDeleteModal(null);
+        // Batch delete tasks for efficiency (optional but good practice)
         for (const task of tasks) {
             await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
         }
@@ -384,7 +407,7 @@ function ProjectDetail({ project, allTasks, syncedEvents }) {
             setGeminiError("Gemini API key is not configured. Please add REACT_APP_GEMINI_API_KEY to your .env.local file.");
             return;
         }
-        if (!userId) return;
+        if (!userId || !db) return;
         setIsGenerating(true);
         setGeminiError('');
 
@@ -558,9 +581,35 @@ function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenCli
     };
     
     const allEvents = useMemo(() => {
-        const projectEvents = projects.map(p => ({ id: `proj-${p.id}`, title: p.name, date: p.deadline ? new Date(p.deadline) : null, type: 'Project Deadline', color: 'bg-purple-500' }));
-        const taskEvents = tasks.map(t => ({ id: `task-${t.id}`, title: t.title, date: t.dueDate ? new Date(t.dueDate) : null, type: 'Task Deadline', color: 'bg-green-500' }));
-        return [...projectEvents, ...taskEvents, ...syncedEvents].filter(e => e.date && !isNaN(e.date)).sort((a, b) => a.date - b.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of today for accurate overdue comparison
+
+        const projectEvents = projects.map(p => ({
+            id: `proj-${p.id}`,
+            title: p.name,
+            date: p.deadline ? new Date(p.deadline) : null,
+            type: 'Project Deadline',
+            color: 'bg-purple-500'
+        }));
+
+        const taskEvents = tasks
+            .filter(t => !t.completed) // 1. Filter out completed tasks
+            .map(t => {
+                const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+                const isOverdue = dueDate && dueDate < today; // 2. Check if task is overdue
+                return {
+                    id: `task-${t.id}`,
+                    title: t.title,
+                    date: dueDate,
+                    type: 'Task Deadline',
+                    color: isOverdue ? 'bg-red-700' : 'bg-green-500', // 3. Assign color based on overdue status
+                    isOverdue: isOverdue
+                };
+            });
+
+        return [...projectEvents, ...taskEvents, ...syncedEvents]
+            .filter(e => e.date && !isNaN(e.date))
+            .sort((a, b) => a.date - b.date);
     }, [projects, tasks, syncedEvents]);
 
     return (
@@ -587,6 +636,7 @@ function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenCli
                                 <p className="font-semibold text-gray-200">{event.title}</p>
                                 <p className="text-sm text-gray-400">
                                     {event.type}
+                                    {event.isOverdue && <span className="font-semibold text-red-400"> (Overdue)</span>}
                                     {event.type === 'Google Calendar' && ` at ${formatTime(event.date)}`}
                                 </p>
                             </div>
@@ -606,13 +656,13 @@ function TaskItem({ task, projects = [], isCompact = false }) {
     const userId = auth.currentUser?.uid;
 
     const handleToggleComplete = async () => {
-        if (!userId) return;
-        await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), { completed: !task.completed });
+        if (!userId || !db) return;
+        await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), { completed: !task.completed, completedAt: !task.completed ? new Date() : null });
     };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
-        if (!userId || !editTitle.trim()) return;
+        if (!userId || !editTitle.trim() || !db) return;
         await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), { 
             title: editTitle,
             priority: editPriority
@@ -621,7 +671,7 @@ function TaskItem({ task, projects = [], isCompact = false }) {
     };
 
     const handleDelete = async () => {
-        if (!userId) return;
+        if (!userId || !db) return;
         await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
         setShowDeleteModal(false);
     };
@@ -680,91 +730,297 @@ function TaskItem({ task, projects = [], isCompact = false }) {
 function HabitTrackerView({ habits, entries }) {
     const [newHabitName, setNewHabitName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
+    const [showAnalytics, setShowAnalytics] = useState(false);
     const userId = auth.currentUser?.uid;
 
     const handleAddHabit = async (e) => {
         e.preventDefault();
-        if (!newHabitName.trim() || !userId) return;
+        if (!newHabitName.trim() || !userId || !db) return;
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habits`), { name: newHabitName, createdAt: new Date() });
         setNewHabitName('');
         setIsAdding(false);
     };
     
-    const groupedEntries = useMemo(() => {
-        return entries.reduce((acc, entry) => {
-            if (!acc[entry.date]) acc[entry.date] = [];
-            acc[entry.date].push(entry);
-            return acc;
-        }, {});
-    }, [entries]);
+    const habitStreaks = useMemo(() => {
+        const streaks = {};
+        habits.forEach(habit => {
+            const habitEntries = entries
+                .filter(e => e.habitId === habit.id && e.completed)
+                .map(e => e.date)
+                .sort((a, b) => new Date(b) - new Date(a));
+            
+            let currentStreak = 0;
+            if (habitEntries.length > 0) {
+                const today = new Date();
+                const todayKey = getLocalDateKey(today);
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayKey = getLocalDateKey(yesterday);
 
-    const todayKey = getLocalDateKey(new Date());
-    if (!groupedEntries[todayKey] && habits.length > 0) {
-        groupedEntries[todayKey] = [];
-    }
-    
-    const sortedDateKeys = Object.keys(groupedEntries).sort((a, b) => new Date(b) - new Date(a));
+                if (habitEntries[0] === todayKey || habitEntries[0] === yesterdayKey) {
+                    currentStreak = 1;
+                    for (let i = 0; i < habitEntries.length - 1; i++) {
+                        const current = new Date(habitEntries[i]);
+                        const next = new Date(habitEntries[i+1]);
+                        const diffDays = Math.round((current - next) / (1000 * 60 * 60 * 24));
+                        if (diffDays === 1) {
+                            currentStreak++;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            streaks[habit.id] = currentStreak;
+        });
+        return streaks;
+    }, [habits, entries]);
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-4xl font-bold text-white">Habit Tracker</h1>
-                <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md font-semibold transition-colors"><Plus size={18} /> {isAdding ? 'Cancel' : 'New Habit'}</button>
+                <div className="flex gap-2">
+                    <button onClick={() => setShowAnalytics(!showAnalytics)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-md font-semibold transition-colors">
+                        <TrendingUp size={18} /> {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+                    </button>
+                    <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md font-semibold transition-colors">
+                        <Plus size={18} /> {isAdding ? 'Cancel' : 'New Habit'}
+                    </button>
+                </div>
             </div>
+
             {isAdding && (
                 <form onSubmit={handleAddHabit} className="flex gap-2 p-4 bg-gray-800 rounded-lg">
                     <input type="text" value={newHabitName} onChange={e => setNewHabitName(e.target.value)} placeholder="e.g., Read for 30 minutes" className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                     <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-semibold">Save</button>
                 </form>
             )}
+
+            {showAnalytics && (
+                <div className="bg-gray-800/60 rounded-lg p-6">
+                    <h2 className="text-2xl font-semibold mb-4">Habit Analytics</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                       {habits.map(habit => <HabitCalendar key={habit.id} habit={habit} entries={entries.filter(e => e.habitId === habit.id)} />)}
+                       {habits.length === 0 && <p className="text-gray-400 md:col-span-3 text-center">No habits to analyze yet.</p>}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {habits.length === 0 && !isAdding && (<p className="text-gray-400 md:col-span-3 text-center py-8">No habits defined yet. Add your first one!</p>)}
-                {sortedDateKeys.map(dateKey => (<HabitDayCard key={dateKey} dateKey={dateKey} habits={habits} entries={groupedEntries[dateKey] || []} />))}
+                {habits.map(habit => (<HabitDayCard key={habit.id} habit={habit} entries={entries.filter(e => e.habitId === habit.id)} streak={habitStreaks[habit.id] || 0} />))}
             </div>
         </div>
     );
 }
 
-function HabitDayCard({ dateKey, habits, entries }) {
+function HabitDayCard({ habit, entries, streak }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState(habit.name);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const userId = auth.currentUser?.uid;
+    const todayKey = getLocalDateKey(new Date());
+    const entry = entries.find(e => e.date === todayKey);
+    const isCompleted = entry ? entry.completed : false;
 
-    const handleHabitToggle = async (habitId, isCompleted) => {
-        if (!userId) return;
-        const entryQuery = query(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), where("habitId", "==", habitId), where("date", "==", dateKey));
-        const existingEntries = await getDocs(entryQuery);
-        if (existingEntries.empty) {
-            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), { habitId, date: dateKey, completed: isCompleted });
+    const handleHabitToggle = async () => {
+        if (!userId || !db) return;
+        if (entry) {
+            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habit_entries`, entry.id), { completed: !isCompleted });
         } else {
-            await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habit_entries`, existingEntries.docs[0].id), { completed: isCompleted });
+            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), { habitId: habit.id, date: todayKey, completed: true });
         }
     };
 
-    const displayDate = useMemo(() => {
-        const today = getLocalDateKey(new Date());
-        const yesterday = getLocalDateKey(new Date(Date.now() - 86400000));
-        if (dateKey === today) return "Today";
-        if (dateKey === yesterday) return "Yesterday";
-        return formatDate(new Date(dateKey));
-    }, [dateKey]);
+    const handleUpdateHabit = async (e) => {
+        e.preventDefault();
+        if (!editedName.trim() || !userId || !db) return;
+        const habitRef = doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id);
+        try {
+            await updateDoc(habitRef, { name: editedName });
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Error updating habit:", error);
+        }
+    };
+
+    const handleDeleteHabit = async () => {
+        if (!userId || !db) return;
+        setShowDeleteModal(false);
+        
+        const entriesPath = `artifacts/${appId}/users/${userId}/habit_entries`;
+        const q = query(collection(db, entriesPath), where("habitId", "==", habit.id));
+        
+        try {
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            querySnapshot.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+
+            const habitRef = doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id);
+            await deleteDoc(habitRef);
+        } catch (error) {
+            console.error("Error deleting habit and its entries:", error);
+        }
+    };
 
     return (
-        <div className="bg-gray-800/60 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-white">{displayDate}</h3>
-            <div className="space-y-2">
-                {habits.map(habit => {
-                    const entry = entries.find(e => e.habitId === habit.id);
-                    const isCompleted = entry ? entry.completed : false;
+        <>
+            <ConfirmModal 
+                isOpen={showDeleteModal} 
+                onClose={() => setShowDeleteModal(false)} 
+                onConfirm={handleDeleteHabit} 
+                title="Delete Habit" 
+                message={`Are you sure you want to delete the habit "${habit.name}"? All its tracked history will also be removed.`} 
+            />
+            <div className="bg-gray-800/60 rounded-lg p-4 flex flex-col justify-between min-h-[160px]">
+                {isEditing ? (
+                    <form onSubmit={handleUpdateHabit} className="flex-grow flex flex-col space-y-2">
+                        <input 
+                            type="text" 
+                            value={editedName} 
+                            onChange={e => setEditedName(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            autoFocus
+                        />
+                        <div className="flex gap-2 mt-auto">
+                            <button type="submit" className="flex-1 p-1.5 text-sm bg-green-600 hover:bg-green-700 rounded-md font-semibold">Save</button>
+                            <button type="button" onClick={() => setIsEditing(false)} className="flex-1 p-1.5 text-sm bg-gray-600 hover:bg-gray-700 rounded-md font-semibold">Cancel</button>
+                        </div>
+                    </form>
+                ) : (
+                    <div className="flex-grow flex flex-col">
+                        <div className="flex justify-between items-start">
+                            <span className="font-semibold text-white pr-2">{habit.name}</span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => setIsEditing(true)} className="p-1 text-gray-400 hover:text-white rounded-md hover:bg-gray-700"><Edit2 size={16} /></button>
+                                <button onClick={() => setShowDeleteModal(true)} className="p-1 text-gray-400 hover:text-red-400 rounded-md hover:bg-gray-700"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+                        <div className={`flex items-center gap-1 text-sm mt-2 ${streak > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
+                            <Flame size={16} />
+                            <span>{streak} day streak</span>
+                        </div>
+                    </div>
+                )}
+                
+                <button 
+                    onClick={handleHabitToggle} 
+                    disabled={isEditing}
+                    className={`w-full mt-4 py-2 rounded-md font-semibold transition-colors ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'} disabled:bg-gray-800 disabled:cursor-not-allowed`}
+                >
+                    {isCompleted ? "Completed Today!" : "Mark as Done"}
+                </button>
+            </div>
+        </>
+    );
+}
+
+function HabitCalendar({ habit, entries }) {
+    const today = new Date();
+    const [date, setDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+    const goToPreviousMonth = () => {
+        setDate(currentDate => new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    };
+
+    const goToNextMonth = () => {
+        setDate(currentDate => new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    const completedDates = useMemo(() => new Set(entries.filter(e => e.completed).map(e => e.date)), [entries]);
+
+    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
+
+    return (
+        <div className="bg-gray-900/50 p-4 rounded-lg">
+            <div className="flex justify-between items-center mb-2">
+                 <button onClick={goToPreviousMonth} className="p-1 rounded-md hover:bg-gray-700">&lt;</button>
+                 <h3 className="font-semibold text-center text-sm">
+                    {habit.name} - {date.toLocaleString('default', { month: 'long' })} {date.getFullYear()}
+                 </h3>
+                 <button onClick={goToNextMonth} className="p-1 rounded-md hover:bg-gray-700">&gt;</button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-400">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1 mt-2">
+                {blanks.map((b, i) => <div key={`b-${i}`}></div>)}
+                {days.map(d => {
+                    const dateKey = getLocalDateKey(new Date(date.getFullYear(), date.getMonth(), d));
+                    const isCompleted = completedDates.has(dateKey);
+                    const isToday = dateKey === getLocalDateKey(new Date());
                     return (
-                        <div key={habit.id} className="flex items-center gap-3">
-                            <button onClick={() => handleHabitToggle(habit.id, !isCompleted)}>
-                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isCompleted ? 'bg-green-500 border-green-500' : 'border-gray-500 hover:border-gray-400'}`}>
-                                    {isCompleted && <CheckSquare size={16} className="text-white" />}
-                                </div>
-                            </button>
-                            <span className={`text-gray-300 ${isCompleted ? 'line-through text-gray-500' : ''}`}>{habit.name}</span>
+                        <div key={d} className={`w-full aspect-square flex items-center justify-center rounded-full text-xs ${isCompleted ? 'bg-green-500 text-white' : 'bg-gray-700'} ${isToday ? 'ring-2 ring-blue-500' : ''}`}>
+                            {d}
                         </div>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+function WeeklyReviewView({ tasks, projects, habits, entries }) {
+    const lastWeek = useMemo(() => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
+        return { start, end };
+    }, []);
+
+    const completedTasks = tasks.filter(t => t.completed && t.completedAt && t.completedAt.toDate() >= lastWeek.start);
+    
+    const habitConsistency = useMemo(() => {
+        if (habits.length === 0) return 0;
+        const last7Days = Array.from({length: 7}, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return getLocalDateKey(d);
+        });
+        
+        let totalPossible = habits.length * 7;
+        let totalCompleted = 0;
+        
+        last7Days.forEach(dateKey => {
+            habits.forEach(habit => {
+                if (entries.some(e => e.habitId === habit.id && e.date === dateKey && e.completed)) {
+                    totalCompleted++;
+                }
+            });
+        });
+        return totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+    }, [habits, entries]);
+
+    return (
+        <div className="space-y-8">
+            <h1 className="text-4xl font-bold text-white">Weekly Review</h1>
+            <p className="text-gray-400">Summary of your activity from {formatDate(lastWeek.start)} to {formatDate(lastWeek.end)}.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-800/60 p-6 rounded-lg text-center">
+                    <p className="text-gray-400 text-sm">Tasks Completed</p>
+                    <p className="text-5xl font-bold text-green-400">{completedTasks.length}</p>
+                </div>
+                 <div className="bg-gray-800/60 p-6 rounded-lg text-center">
+                    <p className="text-gray-400 text-sm">Habit Consistency</p>
+                    <p className="text-5xl font-bold text-orange-400">{habitConsistency}%</p>
+                </div>
+            </div>
+
+            <div className="bg-gray-800/60 p-6 rounded-lg">
+                <h2 className="text-2xl font-semibold mb-4">Completed Tasks This Week</h2>
+                {completedTasks.length > 0 ? (
+                    <div className="space-y-2">
+                        {completedTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact />)}
+                    </div>
+                ) : <p className="text-gray-400">No tasks completed this week. Let's get to it!</p>}
             </div>
         </div>
     );
@@ -801,7 +1057,6 @@ function ConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
     );
 }
 
-// --- NEW AI Context Modal ---
 function AiContextModal({ isOpen, onClose, onConfirm }) {
     const [context, setContext] = useState('');
 
