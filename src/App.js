@@ -215,7 +215,7 @@ function HubApp({ user, handleSignOut }) {
         <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
             <Sidebar onViewChange={handleSetView} projects={projects} goals={goals} userId={user.uid} handleSignOut={handleSignOut} />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} syncedEvents={syncedEvents} />}
+                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} goals={goals} onViewChange={handleSetView} syncedEvents={syncedEvents} />}
                 {activeView === 'project' && selectedProject && <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />}
                 {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
                 {activeView === 'schedule' && <ScheduleView projects={projects} tasks={tasks} syncedEvents={syncedEvents} setSyncedEvents={setSyncedEvents} tokenClient={tokenClient} />}
@@ -408,7 +408,7 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
     );
 }
 
-function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
+function Dashboard({ projects, tasks, goals, onViewChange, syncedEvents }) {
     const [showPlanModal, setShowPlanModal] = useState(false);
     const [dailyPlan, setDailyPlan] = useState('');
     const [isPlanning, setIsPlanning] = useState(false);
@@ -420,6 +420,17 @@ function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
 
     const upcomingTasks = tasks.filter(t => !t.completed && t.dueDate).map(t => ({...t, dueDateObj: new Date(t.dueDate)})).filter(t => t.dueDateObj >= today).sort((a, b) => a.dueDateObj - b.dueDateObj).slice(0, 5);
     const overdueTasks = tasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < today);
+
+    const { standaloneProjects, goalProjects } = useMemo(() => {
+        const standalone = projects.filter(p => !p.goalId);
+        const grouped = projects.reduce((acc, project) => {
+            if (project.goalId) {
+                (acc[project.goalId] = acc[project.goalId] || []).push(project);
+            }
+            return acc;
+        }, {});
+        return { standaloneProjects: standalone, goalProjects: grouped };
+    }, [projects]);
 
     const handlePlanMyDay = async () => {
         setShowPlanModal(true);
@@ -518,12 +529,16 @@ function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
                     <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
                         <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
                         <div className="space-y-4">
-                            {projects.length > 0 ? projects.map(p => (
+                            {goals.map(goal => (
+                                <GoalProgress key={goal.id} goal={goal} projects={goalProjects[goal.id] || []} onViewChange={onViewChange} />
+                            ))}
+                            {standaloneProjects.map(p => (
                                 <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
                                     <div className="flex justify-between items-center mb-1"><span className="font-medium text-gray-300">{p.name}</span><span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span></div>
                                     <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
                                 </div>
-                            )) : <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+                            ))}
+                            {projects.length === 0 && <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
                         </div>
                     </div>
                 </div>
@@ -532,6 +547,47 @@ function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
         </>
     );
 }
+
+function GoalProgress({ goal, projects, onViewChange }) {
+    const [isOpen, setIsOpen] = useState(true);
+
+    const goalProgress = useMemo(() => {
+        if (!projects || projects.length === 0) return 0;
+        const totalProgress = projects.reduce((sum, p) => sum + (p.progress || 0), 0);
+        return totalProgress / projects.length;
+    }, [projects]);
+
+    return (
+        <div className="space-y-2">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold text-purple-300 flex items-center gap-2">
+                        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        {goal.name}
+                    </span>
+                    <span className="text-sm text-gray-400">{Math.round(goalProgress)}%</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2.5">
+                    <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${goalProgress}%` }}></div>
+                </div>
+            </button>
+            {isOpen && (
+                <div className="pl-6 space-y-3 pt-2">
+                    {projects.map(p => (
+                        <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
+                            <div className="flex justify-between items-center mb-1 text-sm">
+                                <span className="font-medium text-gray-300">{p.name}</span>
+                                <span className="text-xs text-gray-400">{Math.round(p.progress || 0)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-600 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 
 function ProjectDetail({ project, allTasks, syncedEvents }) {
     const [isAddingTask, setIsAddingTask] = useState(false);
