@@ -1,4 +1,4 @@
-## ProdHub: Empowering Your Productivity
+# ProdHub: Empowering Your Productivity
 
 **Take control of your growth—professionally, personally, and daily.**  
 ProdHub is a modern, all-in-one web application built to help you organize, achieve, and grow. Seamlessly manage projects, tasks, habits, and your calendar from a single, intuitive platform—all with smart AI-powered features and robust security.
@@ -6,7 +6,10 @@ ProdHub is a modern, all-in-one web application built to help you organize, achi
 **Try ProdHub Now**  
 We are available at: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)
 
-### Key Features
+![ProdHub](images/dashboard_2.png)
+
+## Key Features
+
 **Dashboard Overview**
 Get a snapshot of your productivity: overdue tasks, upcoming deadlines, and overall progress—all at a glance. With the AI Daily Planner, you can get a prioritized and motivational schedule for your day with a single click.
 
@@ -44,11 +47,7 @@ Everything you add is saved in real-time to your secure, private Firebase accoun
 Log in with Google or a traditional email and password. ProdHub prioritizes your privacy and security every step of the way.
 
 
-
-
-![ProdHub](images/dashboard_2.png)
-
-### Technology
+## Technology
 
 ProdHub is built for speed, reliability, and a great user experience.
 
@@ -58,7 +57,7 @@ ProdHub is built for speed, reliability, and a great user experience.
 - **AI Integration:** Google Gemini API
 - **Calendar Integration:** Google Calendar API via Google Identity Services
 
-### Get Started with ProdHub
+## Get Started with ProdHub
 
 Follow these steps to run ProdHub locally and customize it for your workflow.
 
