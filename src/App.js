@@ -5,6 +5,7 @@ import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot
 import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
 
 // --- Firebase Configuration ---
+// It's recommended to store these in environment variables
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -214,7 +215,7 @@ function HubApp({ user, handleSignOut }) {
         <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
             <Sidebar onViewChange={handleSetView} projects={projects} goals={goals} userId={user.uid} handleSignOut={handleSignOut} />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} />}
+                {activeView === 'dashboard' && <Dashboard projects={projects} tasks={tasks} onViewChange={handleSetView} syncedEvents={syncedEvents} />}
                 {activeView === 'project' && selectedProject && <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />}
                 {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
                 {activeView === 'schedule' && <ScheduleView projects={projects} tasks={tasks} syncedEvents={syncedEvents} setSyncedEvents={setSyncedEvents} tokenClient={tokenClient} />}
@@ -407,40 +408,128 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
     );
 }
 
-function Dashboard({ projects, tasks, onViewChange }) {
+function Dashboard({ projects, tasks, onViewChange, syncedEvents }) {
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [dailyPlan, setDailyPlan] = useState('');
+    const [isPlanning, setIsPlanning] = useState(false);
+    const [planningError, setPlanningError] = useState('');
+
     const today = new Date();
     today.setHours(0,0,0,0);
+    const todayKey = getLocalDateKey(new Date());
+
     const upcomingTasks = tasks.filter(t => !t.completed && t.dueDate).map(t => ({...t, dueDateObj: new Date(t.dueDate)})).filter(t => t.dueDateObj >= today).sort((a, b) => a.dueDateObj - b.dueDateObj).slice(0, 5);
     const overdueTasks = tasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < today);
 
+    const handlePlanMyDay = async () => {
+        setShowPlanModal(true);
+        setIsPlanning(true);
+        setDailyPlan('');
+        setPlanningError('');
+
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        if (!apiKey) {
+            setPlanningError("Gemini API key is not configured.");
+            setIsPlanning(false);
+            return;
+        }
+
+        const todaysTasks = tasks.filter(t => !t.completed && t.dueDate === todayKey);
+        const todaysEvents = syncedEvents.filter(e => getLocalDateKey(e.date) === todayKey);
+
+        let context = `Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.\n\n`;
+        
+        if(overdueTasks.length > 0) {
+            context += "Here are the overdue tasks that need urgent attention:\n" + overdueTasks.map(t => `- ${t.title} (Priority: ${t.priority})`).join('\n') + '\n\n';
+        }
+
+        if(todaysTasks.length > 0) {
+            context += "Here are the tasks scheduled for today:\n" + todaysTasks.map(t => `- ${t.title} (Priority: ${t.priority})`).join('\n') + '\n\n';
+        }
+
+        if(todaysEvents.length > 0) {
+            context += "Here are the fixed appointments from the calendar:\n" + todaysEvents.map(e => `- ${e.title} at ${formatTime(e.date)}`).join('\n') + '\n\n';
+        } else {
+            context += "There are no events synced from the calendar for today. You can add them from the Schedule page for a better plan.\n\n"
+        }
+
+        if (overdueTasks.length === 0 && todaysTasks.length === 0 && todaysEvents.length === 0) {
+            setDailyPlan("You have a clear schedule today! No overdue tasks, today's tasks, or calendar events. It's a great day to get ahead on a project or start planning your next steps.");
+            setIsPlanning(false);
+            return;
+        }
+
+        const prompt = `You are a productivity coach. Based on the following information, create a prioritized, motivational, and realistic schedule for the day. Group tasks logically, suggest breaks, and slot tasks around fixed appointments. Start with the most critical items.
+
+        ${context}
+        
+        Generate a step-by-step plan.`;
+
+        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates[0].content.parts[0].text) {
+                setDailyPlan(result.candidates[0].content.parts[0].text);
+            } else {
+                throw new Error("Received an invalid response from the AI.");
+            }
+        } catch (e) {
+            console.error("AI Daily Planner Error:", e);
+            setPlanningError(e.message || "An unexpected error occurred.");
+        } finally {
+            setIsPlanning(false);
+        }
+    };
+
     return (
-        <div className="space-y-8">
-            <h1 className="text-4xl font-bold text-white">Dashboard</h1>
-            {overdueTasks.length > 0 && (
-                <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
-                    <h2 className="text-xl font-semibold text-red-300 mb-3">Overdue Tasks ({overdueTasks.length})</h2>
-                    <div className="space-y-2">{overdueTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div>
+        <>
+            <DailyPlannerModal 
+                isOpen={showPlanModal}
+                onClose={() => setShowPlanModal(false)}
+                plan={dailyPlan}
+                isLoading={isPlanning}
+                error={planningError}
+                retry={handlePlanMyDay}
+            />
+            <div className="space-y-8">
+                <div className="flex flex-wrap gap-4 justify-between items-center">
+                    <h1 className="text-4xl font-bold text-white">Dashboard</h1>
+                    <button onClick={handlePlanMyDay} disabled={isPlanning} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md font-semibold transition-colors disabled:bg-blue-800 disabled:cursor-not-allowed">
+                        {isPlanning ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Sparkles size={18} />}
+                        Plan My Day
+                    </button>
                 </div>
-            )}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
-                    <h2 className="text-2xl font-semibold text-gray-200">Upcoming Deadlines</h2>
-                    {upcomingTasks.length > 0 ? <div className="space-y-3">{upcomingTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div> : <p className="text-gray-400">No upcoming deadlines. Great job!</p>}
-                </div>
-                <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
-                    <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
-                    <div className="space-y-4">
-                        {projects.length > 0 ? projects.map(p => (
-                            <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
-                                <div className="flex justify-between items-center mb-1"><span className="font-medium text-gray-300">{p.name}</span><span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span></div>
-                                <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
-                            </div>
-                        )) : <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+                {overdueTasks.length > 0 && (
+                    <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
+                        <h2 className="text-xl font-semibold text-red-300 mb-3">Overdue Tasks ({overdueTasks.length})</h2>
+                        <div className="space-y-2">{overdueTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div>
+                    </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
+                        <h2 className="text-2xl font-semibold text-gray-200">Upcoming Deadlines</h2>
+                        {upcomingTasks.length > 0 ? <div className="space-y-3">{upcomingTasks.map(task => <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />)}</div> : <p className="text-gray-400">No upcoming deadlines. Great job!</p>}
+                    </div>
+                    <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
+                        <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
+                        <div className="space-y-4">
+                            {projects.length > 0 ? projects.map(p => (
+                                <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
+                                    <div className="flex justify-between items-center mb-1"><span className="font-medium text-gray-300">{p.name}</span><span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span></div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div></div>
+                                </div>
+                            )) : <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+                        </div>
                     </div>
                 </div>
+                <DailyReminder />
             </div>
-            <DailyReminder />
-        </div>
+        </>
     );
 }
 
@@ -1324,6 +1413,46 @@ function GoalPlannerModal({ isOpen, onClose, userId }) {
                     <button onClick={handleGeneratePlan} disabled={isGenerating} className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 font-semibold text-white transition-colors flex items-center gap-2 disabled:bg-purple-800 disabled:cursor-not-allowed">
                         {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Sparkles size={18} />}
                         {isGenerating ? 'Generating Plan...' : 'Generate Plan'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DailyPlannerModal({ isOpen, onClose, plan, isLoading, error, retry }) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-white">Your Daily Plan</h2>
+                    <button onClick={onClose} className="p-1 text-gray-400 hover:text-white"><X size={24} /></button>
+                </div>
+                <div className="overflow-y-auto flex-grow pr-2">
+                    {isLoading && (
+                        <div className="flex flex-col items-center justify-center h-64">
+                            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                            <p className="text-lg text-gray-300">Your AI assistant is planning your day...</p>
+                        </div>
+                    )}
+                    {error && (
+                        <div className="text-center h-64 flex flex-col justify-center items-center">
+                            <p className="text-red-400 mb-4">Error: {error}</p>
+                            <button onClick={retry} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 font-semibold transition-colors">
+                                Try Again
+                            </button>
+                        </div>
+                    )}
+                    {plan && (
+                        <div className="text-gray-300 whitespace-pre-wrap font-mono text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: plan.replace(/\n/g, '<br />') }}>
+                        </div>
+                    )}
+                </div>
+                <div className="flex justify-end mt-6">
+                     <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 font-semibold transition-colors">
+                        Close
                     </button>
                 </div>
             </div>
