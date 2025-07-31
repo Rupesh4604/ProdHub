@@ -28,7 +28,7 @@ Create a "Weekly Review" page that automatically summarizes what you've accompli
 
 Instead of just generating tasks for an existing project, you could have an AI feature that helps you create the project itself. You could give it a high-level goal like "Learn web development" and it could suggest creating several projects (e.g., "Project 1: Build a Portfolio Website," "Project 2: Create a To-Do App") and then generate the tasks for each.
 
-**AI Daily Planner:** ✅
+**AI Daily Planner:** ✅ (feature added)
 
 Add a button on the dashboard called "Plan My Day." The AI would look at your overdue tasks, high-priority tasks for today, and your synced calendar events, and then suggest a prioritized schedule for you to follow.
 
