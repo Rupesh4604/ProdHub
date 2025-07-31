@@ -4,7 +4,7 @@
 
 Streaks: Automatically calculate and display how many consecutive days a user has completed a habit. This is a huge motivator.
 
-Visualizations: Add a simple calendar view or bar chart to show habit consistency over the month.
+Visualizations: Add a simple calendar view to show habit consistency over the month.
 
 **Project Notes & Resources:**
 
