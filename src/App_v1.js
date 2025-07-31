@@ -36,23 +36,6 @@ const formatDate = (date) => {
     return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(d);
 };
 
-// --- NEW Time Formatting Helper ---
-const formatTime = (date) => {
-    if (!date) return '';
-    const d = new Date(date);
-    // Google Calendar API returns just a date for all-day events, which JS interprets as midnight UTC.
-    // A simple check for midnight can help identify these.
-    if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0) {
-        return 'All-day';
-    }
-    return new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    }).format(d);
-};
-
-
 const getLocalDateKey = (date) => {
     const d = new Date(date);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -583,13 +566,7 @@ function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenCli
                                 <span className="text-2xl font-bold">{event.date.getDate()}</span>
                             </div>
                             <div className={`w-1.5 h-12 rounded-full ${event.color}`}></div>
-                            <div>
-                                <p className="font-semibold text-gray-200">{event.title}</p>
-                                <p className="text-sm text-gray-400">
-                                    {event.type}
-                                    {event.type === 'Google Calendar' && ` at ${formatTime(event.date)}`}
-                                </p>
-                            </div>
+                            <div><p className="font-semibold text-gray-200">{event.title}</p><p className="text-sm text-gray-400">{event.type}</p></div>
                         </div>
                     )) : <p className="text-gray-400">No scheduled events with deadlines.</p>}
                 </div>
