@@ -1,0 +1,23 @@
+# Define the services (containers) for your application
+services:
+  # The service for your ProdHub React app
+  prodhub-app:
+    # Tell Docker Compose to build the image from the Dockerfile in the current directory
+    build:
+      context: .
+      # Pass the environment variables from the .env file as build arguments
+      # This securely injects your keys into the build process
+      args:
+        - REACT_APP_FIREBASE_API_KEY=${REACT_APP_FIREBASE_API_KEY}
+        - REACT_APP_FIREBASE_AUTH_DOMAIN=${REACT_APP_FIREBASE_AUTH_DOMAIN}
+        - REACT_APP_FIREBASE_PROJECT_ID=${REACT_APP_FIREBASE_PROJECT_ID}
+        - REACT_APP_FIREBASE_STORAGE_BUCKET=${REACT_APP_FIREBASE_STORAGE_BUCKET}
+        - REACT_APP_FIREBASE_MESSAGING_SENDER_ID=${REACT_APP_FIREBASE_MESSAGING_SENDER_ID}
+        - REACT_APP_FIREBASE_APP_ID=${REACT_APP_FIREBASE_APP_ID}
+        - REACT_APP_GOOGLE_CLIENT_ID=${REACT_APP_GOOGLE_CLIENT_ID}
+        - REACT_APP_GEMINI_API_KEY=${REACT_APP_GEMINI_API_KEY}
+    # Name the container for easier identification
+    container_name: prodhub_container
+    # Map port 3000 on your local machine to port 80 inside the container
+    ports:
+      - "3000:80"

@@ -1,0 +1,19 @@
+# Ignore dependencies, as they are installed inside the container
+node_modules
+
+# Ignore build output, as it's generated inside the container
+build
+
+# Ignore Docker files
+Dockerfile
+docker-compose.yml
+
+# Ignore local environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore git
+.git
+.gitignore

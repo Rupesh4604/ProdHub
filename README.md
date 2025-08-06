@@ -30,20 +30,17 @@ Break down projects into actionable steps. Set priorities (High, Medium, Low), a
 
 ProdHub uses the Google Gemini API for smart, context-aware planning:
 
-  - **Goal Decomposition:** Turns your big ambitions into actionable projects. And with Ai gemerated pre tasks for better understanding.
+- **Goal Decomposition:** Turns your big ambitions into actionable projects. And with Ai gemerated pre tasks for better understanding.
 
-  - **Daily Planning:** Creates a prioritized daily schedule based on your tasks and calendar.
-  
-    -   Smart Scheduling: The "Plan My Day" button on the dashboard will trigger an AI that acts as a productivity coach. It will analyze overdue tasks, today's high-priority items, and your fixed Google Calendar appointments.
+- **Daily Planning:** Creates a prioritized daily schedule based on your tasks and calendar.
 
-    
-    -    Actionable Output: Instead of just a list, the AI will generate a suggested schedule with time blocks and priorities. It will be presented in a clean, easy-to-read modal. For example, it might suggest: "9:00 AM - 10:00 AM: Focus on 'Draft Project Proposal' (Overdue Task)" and then slot other tasks around your scheduled meetings.
+  - Smart Scheduling: The "Plan My Day" button on the dashboard will trigger an AI that acts as a productivity coach. It will analyze overdue tasks, today's high-priority items, and your fixed Google Calendar appointments.
 
+  - Actionable Output: Instead of just a list, the AI will generate a suggested schedule with time blocks and priorities. It will be presented in a clean, easy-to-read modal. For example, it might suggest: "9:00 AM - 10:00 AM: Focus on 'Draft Project Proposal' (Overdue Task)" and then slot other tasks around your scheduled meetings.
 
-    -   Context-Aware: If you haven't synced your calendar, the planner will still work with your tasks but will also gently remind you that connecting your calendar can lead to even better plans.
+  - Context-Aware: If you haven't synced your calendar, the planner will still work with your tasks but will also gently remind you that connecting your calendar can lead to even better plans.
 
-
-  - **Task Generation:** Generates intelligent task lists for your projects, using your project title and synced Google Calendar events for context.
+- **Task Generation:** Generates intelligent task lists for your projects, using your project title and synced Google Calendar events for context.
 
 **Habit Tracker:**
 
@@ -64,7 +61,6 @@ Everything you add is saved in real-time to your secure, private Firebase accoun
 **Safe Sign-In:**
 
 Log in with Google or a traditional email and password. ProdHub prioritizes your privacy and security every step of the way.
-
 
 ## Technology
 
@@ -155,6 +151,52 @@ Update `src/App.js` to use these variables for your `firebaseConfig`.
 - **Deploy:**  
   `firebase deploy` (ensure `firebase.json` is set to use the `build` folder)
 
+  ## Running with Docker 🐳
+
+This project is fully containerized, allowing you to run it in a consistent and isolated environment with a single command.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running on your machine.
+
+### Quick Start
+
+1.  **Clone the Repository**
+
+    ```bash
+    git clone [https://github.com/Rupesh4604/my-productivity-hub.git](https://github.com/Rupesh4604/my-productivity-hub.git)
+    cd ProdHub
+    ```
+
+2.  **Create an Environment File**
+    Create a file named `.env` in the root of the project. This file will hold your secret keys. Copy the contents of `.env.local` or add the following variables, replacing the placeholder values with your actual credentials:
+
+    ```env
+    REACT_APP_FIREBASE_API_KEY=AIzaSy...
+    REACT_APP_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+    REACT_APP_FIREBASE_PROJECT_ID=your-project-id
+    REACT_APP_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+    REACT_APP_FIREBASE_MESSAGING_SENDER_ID=1234567890
+    REACT_APP_FIREBASE_APP_ID=1:1234567890:web:abcdef123456
+    REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+    REACT_APP_GEMINI_API_KEY=your-gemini-api-key
+    ```
+
+3.  **Build and Run the Container**
+    Open your terminal in the project root and run the following command:
+
+    ```bash
+    docker-compose up --build
+    ```
+
+    This command will build the Docker image based on the `Dockerfile` and then start the container.
+
+4.  **Access the Application**
+    Once the container is running, open your web browser and navigate to:
+    [**http://localhost:3000**](http://localhost:3000)
+
+    You should see the ProdHub application running live! To stop the application, press `Ctrl + C` in your terminal.
+
 ### Ready to Supercharge Your Productivity?
 
 ProdHub brings your goals, tasks, habits, and schedule into one powerful, secure, and intelligent hub.  
@@ -171,9 +213,11 @@ Community Page: [OpenSourceEnv Teamspace](https://www.notion.so/Teamspace-Home-9
 Github: https://github.com/openSourceEnv
 
 ## License
+
 This project is licensed under the MIT License. For details, refer to the LICENSE.md file. You can find terms & conditions and other privacy related details at [prodhub-info](https://github.com/Rupesh4604/prodhub-info/tree/main).
 
 ## Contact
+
 Created by: Rupesh Kumar Yadav Mediboyina, Email: rupesh32003@gmail.com
 
 LinkedIn: www.linkedin.com/in/mediboyina-rupesh-kumar-yadav-8b7a14205
