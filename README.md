@@ -42,25 +42,19 @@ ProdHub uses the Google Gemini API for smart, context-aware planning:
 
 - **Task Generation:** Generates intelligent task lists for your projects, using your project title and synced Google Calendar events for context.
 
-**Habit Tracker:**
+**Habit Tracker:** Build better routines with a full-featured habit tracker. Set daily habits, check them off, and track your consistency and streaks over time. You can easily edit or delete habits as your goals evolve.
 
-Build better routines with a full-featured habit tracker. Set daily habits, check them off, and track your consistency and streaks over time. You can easily edit or delete habits as your goals evolve.
+**Unified Schedule:** See all your project deadlines, task due dates (including overdue items), and Google Calendar events beautifully organized in one timeline - no more switching between apps.
 
-**Unified Schedule:**
+**Secure Calendar Integration:** Sync your Google Calendar securely and privately. ProdHub only reads event information to help you plan and never stores or modifies your calendar data. Your data stays yours.
 
-See all your project deadlines, task due dates (including overdue items), and Google Calendar events beautifully organized in one timeline - no more switching between apps.
-
-**Secure Calendar Integration:**
-
-Sync your Google Calendar securely and privately. ProdHub only reads event information to help you plan and never stores or modifies your calendar data. Your data stays yours.
-
-**Persistent, Private Data:**
+<!--**Persistent, Private Data:**
 
 Everything you add is saved in real-time to your secure, private Firebase account. Your information is always up-to-date and accessible wherever you are.
 
 **Safe Sign-In:**
 
-Log in with Google or a traditional email and password. ProdHub prioritizes your privacy and security every step of the way.
+Log in with Google or a traditional email and password. ProdHub prioritizes your privacy and security every step of the way.-->
 
 ## Technology
 
@@ -151,7 +145,7 @@ Update `src/App.js` to use these variables for your `firebaseConfig`.
 - **Deploy:**  
   `firebase deploy` (ensure `firebase.json` is set to use the `build` folder)
 
-  ## Running with Docker 🐳
+## Running with Docker 🐳
 
 This project is fully containerized, allowing you to run it in a consistent and isolated environment with a single command.
 
@@ -197,10 +191,6 @@ This project is fully containerized, allowing you to run it in a consistent and 
 
     You should see the ProdHub application running live! To stop the application, press `Ctrl + C` in your terminal.
 
-### Ready to Supercharge Your Productivity?
-
-ProdHub brings your goals, tasks, habits, and schedule into one powerful, secure, and intelligent hub.  
-Take the first step toward a more organized, focused, and productive life.
 
 **Start your journey with ProdHub today.**
 
