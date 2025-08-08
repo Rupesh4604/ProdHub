@@ -6,6 +6,11 @@ Streaks: Automatically calculate and display how many consecutive days a user ha
 
 Visualizations: Add a simple calendar view to show habit consistency over the month.
 
+**Project Features:**
+Assign Project deadines along with task deadlines
+
+Show caseing number of tasks completed in a project within the project page 
+
 **Project Notes & Resources:**
 
 Add a dedicated "Notes" tab within each project where you can jot down ideas, store code snippets, or keep important information.
