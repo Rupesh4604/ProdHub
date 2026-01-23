@@ -1,0 +1,46 @@
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
+    let retries = 0;
+    while (retries < maxRetries) {
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                return await response.json();
+            }
+
+            if (response.status === 429) {
+                retries++;
+                if (retries >= maxRetries) {
+                    throw new Error("Rate limit exceeded. Please try again later.");
+                }
+                const waitTime = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                console.warn(`Gemini API 429: Retrying in ${Math.round(waitTime)}ms...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                continue;
+            }
+
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+        } catch (error) {
+            if (error.message.includes("Rate limit exceeded") || (retries < maxRetries && error.name === 'TypeError')) {
+                // If it's a network error (TypeError) or we already handled 429, we might want to try again unless it's the last retry
+                if (error.message.includes("Rate limit exceeded")) throw error;
+                
+                retries++;
+                const waitTime = Math.pow(2, retries) * 1000;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                continue;
+            }
+            throw error;
+        }
+    }
+};

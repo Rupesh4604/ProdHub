@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Book, Calendar, CheckSquare, Clock, Edit2, Flame, Info, LogOut, Plus, Repeat, Save, Sparkles, Tag, Trash2, TrendingUp, X } from 'lucide-react';
+import { callGeminiWithRetry } from './services/geminiService';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -438,10 +439,7 @@ function ProjectDetail({ project, allTasks, syncedEvents }) {
         
         const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { tasks: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, priority: { type: "STRING", enum: ["High", "Medium", "Low"] } }, required: ["title", "priority"] } } }, required: ["tasks"] } } };
         try {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-            const result = await response.json();
+            const result = await callGeminiWithRetry(payload, apiKey);
             if (result.candidates && result.candidates[0].content.parts[0].text) {
                 const generated = JSON.parse(result.candidates[0].content.parts[0].text);
                 if (generated.tasks && generated.tasks.length > 0) {
