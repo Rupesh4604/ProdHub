@@ -25,7 +25,17 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     const filtered = allTasks.filter((t) => t.projectId === project.id);
 
     if (sortMode === 'random') {
-      return filtered.slice().sort(() => Math.random() - 0.5);
+      const shuffle = (list) => {
+        const arr = list.slice();
+        for (let i = arr.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      };
+      const incomplete = filtered.filter((t) => !t.completed);
+      const completed = filtered.filter((t) => t.completed);
+      return [...shuffle(incomplete), ...shuffle(completed)];
     }
 
     const parseDueDate = (value) => {
