@@ -11,6 +11,7 @@ import AiContextModal from '../../components/modals/AiContextModal';
 export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', dueDate: '', priority: 'Medium' });
+  const [sortMode, setSortMode] = useState('deadline');
   const [editingProject, setEditingProject] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,12 +20,42 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
 
   const userId = auth?.currentUser?.uid;
   const tasks = useMemo(() => {
-    const priorityOrder = { Low: 0, Medium: 1, High: 2 };
-    return allTasks
-      .filter((t) => t.projectId === project.id)
-      .slice()
-      .sort((a, b) => (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99));
-  }, [allTasks, project.id]);
+    const priorityOrderHigh = { High: 0, Medium: 1, Low: 2 };
+    const priorityOrderLow = { Low: 0, Medium: 1, High: 2 };
+    const filtered = allTasks.filter((t) => t.projectId === project.id);
+
+    if (sortMode === 'random') {
+      return filtered.slice().sort(() => Math.random() - 0.5);
+    }
+
+    const parseDueDate = (value) => {
+      const ts = Date.parse(value);
+      return Number.isFinite(ts) ? ts : Number.POSITIVE_INFINITY;
+    };
+
+    const sorted = filtered.slice().sort((a, b) => {
+      // Always keep incomplete tasks above completed tasks
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+
+      let cmp = 0;
+      switch (sortMode) {
+        case 'priority-high-low':
+          cmp = (priorityOrderHigh[a.priority] ?? 99) - (priorityOrderHigh[b.priority] ?? 99);
+          break;
+        case 'priority-low-high':
+          cmp = (priorityOrderLow[a.priority] ?? 99) - (priorityOrderLow[b.priority] ?? 99);
+          break;
+        case 'deadline':
+          cmp = parseDueDate(a.dueDate) - parseDueDate(b.dueDate);
+          break;
+        default:
+          cmp = 0;
+      }
+      return cmp;
+    });
+
+    return sorted;
+  }, [allTasks, project.id, sortMode]);
 
   useEffect(() => {
     if (!userId || !project || !db) return;
@@ -222,7 +253,18 @@ Based on the user's main instruction and the background context, generate a list
       <div className="bg-gray-800/60 rounded-lg p-6">
         <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold">To-Do List</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3 items-center">
+            <label className="text-sm text-gray-300">Sort</label>
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value)}
+              className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="deadline">Deadline: Earliest First</option>
+              <option value="priority-low-high">Priority: Low → High</option>
+              <option value="priority-high-low">Priority: High → Low</option>
+              <option value="random">Random</option>
+            </select>
             <button
               onClick={() => setShowAiContextModal(true)}
               disabled={isGenerating}
@@ -274,7 +316,7 @@ Based on the user's main instruction and the background context, generate a list
         )}
         <div className="space-y-3">
           {tasks.length > 0 ? (
-            tasks.sort((a, b) => a.completed - b.completed).map((task) => <TaskItem key={task.id} task={task} />)
+            tasks.map((task) => <TaskItem key={task.id} task={task} />)
           ) : (
             <p className="text-gray-400 text-center py-4">No tasks for this project yet. Try generating some with AI!</p>
           )}
