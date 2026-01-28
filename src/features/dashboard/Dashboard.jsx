@@ -5,7 +5,6 @@ import { GEMINI_API_KEY } from '../../config/env';
 import { formatTime, getLocalDateKey } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
 import GoalProgress from './GoalProgress';
-import DailyReminder from './DailyReminder';
 import DailyPlannerModal from '../../components/modals/DailyPlannerModal';
 
 export default function Dashboard({ projects, tasks, goals, onViewChange, syncedEvents }) {
@@ -181,7 +180,6 @@ Generate a step-by-step plan.`;
             </div>
           </div>
         </div>
-        <DailyReminder />
       </div>
     </>
   );

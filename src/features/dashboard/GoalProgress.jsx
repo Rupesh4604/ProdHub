@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function GoalProgress({ goal, projects, onViewChange }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const goalProgress = useMemo(() => {
     if (!projects || projects.length === 0) return 0;

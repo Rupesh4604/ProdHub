@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Sparkles, Trash2, TrendingUp } from 'lucide-react';
-import { collection, doc, addDoc, updateDoc, deleteDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
 import GoalPlannerModal from '../../components/modals/GoalPlannerModal';
