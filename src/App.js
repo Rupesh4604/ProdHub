@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { useAuth } from './contexts/AuthContext';
 import { appId, GOOGLE_CLIENT_ID, isFirebaseConfigured } from './config/env';
