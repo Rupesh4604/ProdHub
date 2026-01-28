@@ -1,4 +1,4 @@
-const GEMINI_MODEL = 'gemini-2.5-flash';
+import { GEMINI_MODEL } from '../config/env';
 
 export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
     let retries = 0;
