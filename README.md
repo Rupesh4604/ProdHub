@@ -4,9 +4,12 @@
 ProdHub is a modern, all-in-one web application built to help you organize, achieve, and grow. Seamlessly manage projects, tasks, habits, and your calendar from a single, intuitive platform—all with smart AI-powered features and robust security.
 
 **Try ProdHub Now**  
-We are available at: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)
+🌐 Web App: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)  
+🧩 Chrome Extension: [ProdHub on the Chrome Web Store](#) *(coming soon)*
 
 ![ProdHub](images/dashboard_2.png)
+
+---
 
 ## Key Features
 
@@ -30,13 +33,13 @@ Break down projects into actionable steps. Set priorities (High, Medium, Low), a
 
 ProdHub uses the Google Gemini API for smart, context-aware planning:
 
-- **Goal Decomposition:** Turns your big ambitions into actionable projects. And with Ai gemerated pre tasks for better understanding.
+- **Goal Decomposition:** Turns your big ambitions into actionable projects. And with AI generated pre tasks for better understanding.
 
 - **Daily Planning:** Creates a prioritized daily schedule based on your tasks and calendar.
 
   - Smart Scheduling: The "Plan My Day" button on the dashboard will trigger an AI that acts as a productivity coach. It will analyze overdue tasks, today's high-priority items, and your fixed Google Calendar appointments.
 
-  - Actionable Output: Instead of just a list, the AI will generate a suggested schedule with time blocks and priorities. It will be presented in a clean, easy-to-read modal. For example, it might suggest: "9:00 AM - 10:00 AM: Focus on 'Draft Project Proposal' (Overdue Task)" and then slot other tasks around your scheduled meetings.
+  - Actionable Output: Instead of just a list, the AI will generate a suggested schedule with time blocks and priorities. It will be presented in a clean, easy-to-read modal.
 
   - Context-Aware: If you haven't synced your calendar, the planner will still work with your tasks but will also gently remind you that connecting your calendar can lead to even better plans.
 
@@ -48,13 +51,115 @@ ProdHub uses the Google Gemini API for smart, context-aware planning:
 
 **Secure Calendar Integration:** Sync your Google Calendar securely and privately. ProdHub only reads event information to help you plan and never stores or modifies your calendar data. Your data stays yours.
 
-<!--**Persistent, Private Data:**
+---
 
-Everything you add is saved in real-time to your secure, private Firebase account. Your information is always up-to-date and accessible wherever you are.
+## 🧩 Chrome Extension
 
-**Safe Sign-In:**
+ProdHub is also available as a **Chrome side panel extension**, so you can access your full productivity dashboard without leaving your current tab.
 
-Log in with Google or a traditional email and password. ProdHub prioritizes your privacy and security every step of the way.-->
+### Features of the Extension
+
+- Opens as a **side panel** — keeps your current tab intact
+- Full access to all ProdHub features: tasks, habits, goals, schedule, and AI planner
+- **Responsive UI** — compact, mobile-friendly layout optimized for the narrow side panel
+- Secure Google sign-in via Firebase Authentication
+- Real-time sync with your Firestore data across web and extension
+
+### Installing the Extension (Development / Unpacked)
+
+1. **Build the extension bundle:**
+   ```sh
+   npm run build:extension
+   ```
+   This runs `react-scripts build` and then copies `manifest.extension.json` → `build/manifest.json`, making the `build/` folder a valid Chrome extension package.
+
+2. **Load in Chrome:**
+   - Open `chrome://extensions/` in your browser
+   - Toggle **Developer mode** ON (top right)
+   - Click **"Load unpacked"**
+   - Select the `build/` folder
+
+3. **Open the side panel:**
+   - Click the ProdHub icon in your Chrome toolbar
+   - The side panel will open. Sign in with Google to get started.
+
+### Publishing to the Chrome Web Store
+
+Follow these steps to publish your own instance of the extension:
+
+#### Step 1 — Prepare & Build
+
+```sh
+npm run build:extension
+```
+
+Then create a ZIP of the `build/` folder contents (**not** the folder itself — the `manifest.json` must be at the root of the ZIP):
+
+```sh
+# PowerShell (Windows)
+Compress-Archive -Path .\build\* -DestinationPath prodhub-extension.zip
+```
+
+```sh
+# macOS / Linux
+cd build && zip -r ../prodhub-extension.zip . && cd ..
+```
+
+> [!IMPORTANT]
+> Verify that `manifest.json` is at the **root** of the ZIP (not inside a subfolder). Chrome will reject the package otherwise.
+
+#### Step 2 — Create a Developer Account
+
+- Go to the [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole/)
+- Sign in with your Google account
+- Pay the one-time **$5 developer registration fee** if this is your first extension
+
+#### Step 3 — Upload the Extension
+
+1. Click **"New Item"** in the dashboard
+2. Drag and drop `prodhub-extension.zip` into the upload area
+3. Wait for it to process — you will be taken to the listing editor
+
+#### Step 4 — Complete the Store Listing
+
+Fill in the following required fields:
+
+| Field | Suggested Value |
+|---|---|
+| **Name** | ProdHub – Productivity Side Panel |
+| **Short description** | All-in-one productivity: tasks, habits, goals & AI planner in your Chrome side panel. |
+| **Category** | Productivity |
+| **Language** | English |
+| **Screenshots** | At least 1 screenshot (1280×800 or 640×400 px) |
+| **Privacy Policy URL** | Link to your privacy policy (required if you handle user data) |
+
+> [!NOTE]
+> ProdHub uses Firebase Authentication and Firestore. In the **Privacy Practices** tab you must declare that your extension collects user authentication data (email, name) stored in Firebase.
+
+#### Step 5 — Submit for Review
+
+- Set visibility to **Public** (or **Unlisted** for testing)
+- Click **"Submit for Review"**
+- Review typically takes **a few hours to a few days**
+
+#### Extension Manifest Reference
+
+The extension uses `manifest_version: 3` with the following key configuration:
+
+```json
+{
+  "name": "ProdHub Chrome Extension",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": ["sidePanel", "identity"],
+  "side_panel": { "default_path": "index.html" },
+  "action": { "default_title": "Open ProdHub Panel" }
+}
+```
+
+The extension manifest lives at `public/manifest.extension.json` and is automatically copied to `build/manifest.json` by the `build:extension` script.
+
+---
 
 ## Technology
 
@@ -65,6 +170,9 @@ ProdHub is built for speed, reliability, and a great user experience.
 - **Styling:** Tailwind CSS
 - **AI Integration:** Google Gemini API
 - **Calendar Integration:** Google Calendar API via Google Identity Services
+- **Extension:** Chrome Manifest V3 Side Panel API
+
+---
 
 ## Get Started with ProdHub
 
@@ -138,12 +246,14 @@ Update `src/App.js` to use these variables for your `firebaseConfig`.
 
 #### 6. Run and Deploy
 
-- **Start locally:**  
-  `npm start` (opens at `http://localhost:3000`)
-- **Build:**  
-  `npm run build`
-- **Deploy:**  
-  `firebase deploy` (ensure `firebase.json` is set to use the `build` folder)
+| Command | Description |
+|---|---|
+| `npm start` | Start local dev server at `http://localhost:3000` |
+| `npm run build` | Build production web app |
+| `npm run build:extension` | Build Chrome extension package in `build/` |
+| `firebase deploy` | Deploy web app to Firebase Hosting |
+
+---
 
 ## Running with Docker 🐳
 
@@ -158,12 +268,12 @@ This project is fully containerized, allowing you to run it in a consistent and 
 1.  **Clone the Repository**
 
     ```bash
-    git clone [https://github.com/Rupesh4604/my-productivity-hub.git](https://github.com/Rupesh4604/my-productivity-hub.git)
+    git clone https://github.com/Rupesh4604/my-productivity-hub.git
     cd ProdHub
     ```
 
 2.  **Create an Environment File**
-    Create a file named `.env` in the root of the project. This file will hold your secret keys. Copy the contents of `.env.local` or add the following variables, replacing the placeholder values with your actual credentials:
+    Create a file named `.env` in the root of the project. Copy the contents of `.env.local` or add the following variables, replacing the placeholder values with your actual credentials:
 
     ```env
     REACT_APP_FIREBASE_API_KEY=AIzaSy...
@@ -177,20 +287,16 @@ This project is fully containerized, allowing you to run it in a consistent and 
     ```
 
 3.  **Build and Run the Container**
-    Open your terminal in the project root and run the following command:
 
     ```bash
     docker-compose up --build
     ```
 
-    This command will build the Docker image based on the `Dockerfile` and then start the container.
-
 4.  **Access the Application**
-    Once the container is running, open your web browser and navigate to:
-    [**http://localhost:3000**](http://localhost:3000)
+    Once the container is running, open your browser at [**http://localhost:3000**](http://localhost:3000).  
+    To stop, press `Ctrl + C` in your terminal.
 
-    You should see the ProdHub application running live! To stop the application, press `Ctrl + C` in your terminal.
-
+---
 
 **Start your journey with ProdHub today.**
 

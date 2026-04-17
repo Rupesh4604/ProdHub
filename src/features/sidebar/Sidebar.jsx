@@ -56,11 +56,13 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
   return (
     <>
       <GoalPlannerModal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} userId={userId} />
-      <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
-        <div className="space-y-6 flex-1 overflow-y-auto">
-          <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
-            <Book size={24} /> ProdHub
-          </h1>
+      <aside className="w-full h-full md:w-64 bg-gray-900/50 md:border-r border-gray-700/50 p-4 flex flex-col">
+        <div className="space-y-6 flex-1 overflow-y-auto no-scrollbar">
+          <div className="hidden md:flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+              <Book size={24} /> ProdHub
+            </h1>
+          </div>
           <nav className="space-y-2">
             <button
               onClick={() => handleNavigate('dashboard')}

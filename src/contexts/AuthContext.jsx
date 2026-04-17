@@ -5,6 +5,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   signOut,
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -37,8 +38,26 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = async () => {
     if (!auth) throw new Error('Auth not configured');
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    
+    if (window.chrome && window.chrome.identity) {
+      return new Promise((resolve, reject) => {
+        window.chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+          if (window.chrome.runtime.lastError || !token) {
+            return reject(window.chrome.runtime.lastError || new Error('No OAuth token returned.'));
+          }
+          try {
+            const credential = GoogleAuthProvider.credential(null, token);
+            await signInWithCredential(auth, credential);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+    } else {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    }
   };
 
   const emailSignIn = async (email, password) => {
