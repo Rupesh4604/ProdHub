@@ -1,6 +1,6 @@
 import { GEMINI_MODEL } from '../config/env';
 
-export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
+export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 6) => {
     let retries = 0;
     while (retries < maxRetries) {
         try {
@@ -31,11 +31,14 @@ export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
         } catch (error) {
-            if (error.message.includes("Rate limit") || error.message.includes("Service unavailable") || (retries < maxRetries && error.name === 'TypeError')) {
-                // If we already handled 429/503 and exhausted retries, throw it
-                if (error.message.includes("Rate limit") || error.message.includes("Service unavailable")) throw error;
-                
+            if (error.message.includes("Rate limit") || error.message.includes("Service unavailable")) {
+                throw error;
+            }
+            if (error.name === 'TypeError') {
                 retries++;
+                if (retries >= maxRetries) {
+                    throw new Error(`Network error: Failed after ${maxRetries} attempts`);
+                }
                 const waitTime = Math.pow(2, retries) * 1000;
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
@@ -43,4 +46,5 @@ export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
             throw error;
         }
     }
+    throw new Error(`Failed to generate content after ${maxRetries} attempts`);
 };
