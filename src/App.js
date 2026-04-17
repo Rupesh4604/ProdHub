@@ -13,6 +13,7 @@ import AllTasksView from './features/tasks/AllTasksView';
 import ScheduleView from './features/schedule/ScheduleView';
 import HabitTrackerView from './features/habits/HabitTrackerView';
 import WeeklyReviewView from './features/review/WeeklyReviewView';
+import { Menu, Book } from 'lucide-react';
 
 function HubApp({ user, handleSignOut }) {
     const [projects, setProjects] = useState([]);
@@ -22,6 +23,7 @@ function HubApp({ user, handleSignOut }) {
     const [habitEntries, setHabitEntries] = useState([]);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const [syncedEvents, setSyncedEvents] = useState([]);
     const [tokenClient, setTokenClient] = useState(null);
@@ -101,18 +103,36 @@ function HubApp({ user, handleSignOut }) {
     const handleSetView = (view, projectId = null) => {
         setActiveView(view);
         setSelectedProjectId(projectId);
+        setIsSidebarOpen(false); // Auto-close sidebar on mobile
     };
 
     return (
-        <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex">
-            <Sidebar
-                onViewChange={handleSetView}
-                projects={projects}
-                goals={goals}
-                userId={user.uid}
-                handleSignOut={handleSignOut}
-            />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <div className="bg-gray-900 text-gray-100 min-h-screen font-sans flex flex-col md:flex-row">
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-700/50 bg-gray-900">
+                <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
+                    <Book size={20} /> ProdHub
+                </h1>
+                <button 
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                    className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
+                >
+                    <Menu size={24} />
+                </button>
+            </div>
+
+            {/* Sidebar Container */}
+            <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block md:w-64 flex-shrink-0 h-[calc(100vh-73px)] md:h-screen w-full`}>
+                <Sidebar
+                    onViewChange={handleSetView}
+                    projects={projects}
+                    goals={goals}
+                    userId={user.uid}
+                    handleSignOut={handleSignOut}
+                />
+            </div>
+            
+            <main className={`${isSidebarOpen ? 'hidden md:block' : 'block'} flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen`}>
                 {activeView === 'dashboard' && (
                     <Dashboard
                         projects={projects}

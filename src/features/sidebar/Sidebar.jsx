@@ -56,15 +56,12 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
   return (
     <>
       <GoalPlannerModal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} userId={userId} />
-      <aside className="w-64 bg-gray-900/50 border-r border-gray-700/50 p-4 flex flex-col">
+      <aside className="w-full h-full md:w-64 bg-gray-900/50 md:border-r border-gray-700/50 p-4 flex flex-col">
         <div className="space-y-6 flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between">
+          <div className="hidden md:flex items-center justify-between">
             <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
               <Book size={24} /> ProdHub
             </h1>
-            <button onClick={() => window.close()} className="text-gray-400 hover:text-white p-1 rounded-md hover:bg-gray-800 transition-colors" title="Collapse Panel">
-              <X size={20} />
-            </button>
           </div>
           <nav className="space-y-2">
             <button
