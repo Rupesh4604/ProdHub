@@ -1,0 +1,35 @@
+{
+  "name": "ProdHub Chrome Extension",
+  "version": "1.0",
+  "manifest_version": 3,
+  "description": "Your side-panel productivity hub.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "sidePanel",
+    "identity"
+  ],
+  "oauth2": {
+    "client_id": "357244560688-4ibqpt07g54ns83qtimb2rtsa3p42uur.apps.googleusercontent.com",
+    "scopes": [
+      "profile",
+      "email",
+      "openid"
+    ]
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Open ProdHub Panel",
+    "default_icon": "logo192.png"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "icons": {
+    "192": "logo192.png",
+    "512": "logo512.png"
+  }
+}

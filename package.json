@@ -2,6 +2,7 @@
   "name": "my-productivity-hub",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@react-oauth/google": "^0.12.2",
     "@testing-library/dom": "^10.4.0",
@@ -18,6 +19,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "build:extension": "react-scripts build && node -e \"require('fs').copyFileSync('./build/manifest.extension.json', './build/manifest.json')\"",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
