@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { formatTime } from '../../utils/datetime';
 import { fetchCalendarEvents } from '../../services/googleCalendar';
+import { RefreshCw, CalendarDays } from 'lucide-react';
 
 export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenClient }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +40,7 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
       date: p.deadline ? new Date(p.deadline) : null,
       type: 'Project Deadline',
       color: 'bg-purple-500',
+      dotColor: 'bg-purple-400',
     }));
 
     const taskEvents = tasks
@@ -51,7 +53,8 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
           title: t.title,
           date: dueDate,
           type: 'Task Deadline',
-          color: isOverdue ? 'bg-red-700' : 'bg-green-500',
+          color: isOverdue ? 'bg-red-700' : 'bg-emerald-500',
+          dotColor: isOverdue ? 'bg-red-400' : 'bg-emerald-400',
           isOverdue,
         };
       });
@@ -62,61 +65,58 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
   }, [projects, tasks, syncedEvents]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-4xl font-bold text-white">Schedule</h1>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold text-white tracking-tight">Schedule</h1>
         <button
           onClick={handleSync}
           disabled={isLoading || !tokenClient}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md font-semibold transition-colors disabled:bg-red-800 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-lg shadow-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
         >
           {isLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
           ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M8 2v4" />
-              <path d="M16 2v4" />
-              <rect width="18" height="18" x="3" y="4" rx="2" />
-              <path d="M3 10h18" />
-            </svg>
+            <RefreshCw size={13} />
           )}
-          {isLoading ? 'Syncing...' : syncedEvents.length > 0 ? 'Refresh Calendar' : 'Sync with Google Calendar'}
+          {isLoading ? 'Syncing…' : syncedEvents.length > 0 ? 'Refresh' : 'Sync Calendar'}
         </button>
       </div>
-      {error && <div className="text-red-400 bg-red-900/50 p-3 rounded-md text-sm">{error}</div>}
-      <div className="bg-gray-800/60 rounded-lg p-6">
-        <h2 className="text-2xl font-semibold mb-4">Upcoming Deadlines & Events</h2>
-        <div className="space-y-4">
+
+      {error && (
+        <div className="text-red-300 bg-red-950/60 border border-red-700/50 p-3 rounded-2xl text-xs">{error}</div>
+      )}
+
+      {/* Events list */}
+      <div className="bg-gray-800/40 border border-gray-700/40 rounded-2xl p-4 backdrop-blur-sm">
+        <h2 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-1.5">
+          <CalendarDays size={15} className="text-gray-500" />
+          Upcoming Deadlines & Events
+        </h2>
+        <div className="space-y-2">
           {allEvents.length > 0 ? (
             allEvents.map((event) => (
-              <div key={event.id} className="flex items-center gap-4 p-3 bg-gray-900/50 rounded-md">
-                <div className="flex flex-col items-center justify-center w-20 text-center">
-                  <span className="text-sm text-gray-400">{event.date.toLocaleString('default', { month: 'short' })}</span>
-                  <span className="text-2xl font-bold">{event.date.getDate()}</span>
+              <div key={event.id} className="flex items-center gap-3 p-2.5 bg-gray-900/40 border border-gray-700/30 rounded-xl hover:border-gray-600/50 transition-all duration-150 group">
+                {/* Date block */}
+                <div className="flex flex-col items-center justify-center w-11 flex-shrink-0 text-center">
+                  <span className="text-xs text-gray-500 leading-none">{event.date.toLocaleString('default', { month: 'short' })}</span>
+                  <span className="text-xl font-bold leading-tight text-white">{event.date.getDate()}</span>
                 </div>
-                <div className={`w-1.5 h-12 rounded-full ${event.color}`}></div>
-                <div>
-                  <p className="font-semibold text-gray-200">{event.title}</p>
-                  <p className="text-sm text-gray-400">
+                {/* Color bar */}
+                <div className={`w-1 h-10 rounded-full flex-shrink-0 ${event.color}`} />
+                {/* Info */}
+                <div className="flex-grow min-w-0">
+                  <p className="text-sm font-medium text-gray-200 truncate">{event.title}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
                     {event.type}
-                    {event.isOverdue && <span className="font-semibold text-red-400"> (Overdue)</span>}
-                    {event.type === 'Google Calendar' && ` at ${formatTime(event.date)}`}
+                    {event.isOverdue && <span className="font-semibold text-red-400"> · Overdue</span>}
+                    {event.type === 'Google Calendar' && ` · ${formatTime(event.date)}`}
                   </p>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-gray-400">No scheduled events with deadlines.</p>
+            <p className="text-gray-500 text-sm text-center py-6">No scheduled events with deadlines.</p>
           )}
         </div>
       </div>

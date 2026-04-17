@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Sparkles, Trash2, TrendingUp, X } from 'lucide-react';
+import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
@@ -57,7 +57,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
     <>
       <GoalPlannerModal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} userId={userId} />
       <aside className="w-full h-full md:w-64 bg-gray-900/50 md:border-r border-gray-700/50 p-4 flex flex-col">
-        <div className="space-y-6 flex-1 overflow-y-auto">
+        <div className="space-y-6 flex-1 overflow-y-auto no-scrollbar">
           <div className="hidden md:flex items-center justify-between">
             <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
               <Book size={24} /> ProdHub

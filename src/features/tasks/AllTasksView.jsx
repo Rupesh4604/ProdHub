@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import TaskItem from '../../components/shared/TaskItem';
+import { ListFilter, ArrowUpDown } from 'lucide-react';
 
 export default function AllTasksView({ tasks, projects }) {
   const [filter, setFilter] = useState('All');
@@ -24,28 +25,31 @@ export default function AllTasksView({ tasks, projects }) {
       return 0;
     });
   }, [tasks, projects, filter, sortBy]);
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-4xl font-bold text-white">All Tasks</h1>
-      <div className="flex flex-wrap gap-4 items-center p-4 bg-gray-800/60 rounded-lg">
-        <div>
-          <span className="text-sm font-medium text-gray-400 mr-2">Filter by:</span>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-white tracking-tight">All Tasks</h1>
+
+      {/* Filter & Sort bar */}
+      <div className="flex gap-2 p-3 bg-gray-800/40 border border-gray-700/40 rounded-2xl backdrop-blur-sm">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <ListFilter size={14} className="text-gray-500 flex-shrink-0" />
           <select
             onChange={(e) => setFilter(e.target.value)}
             value={filter}
-            className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 bg-gray-700/80 border border-gray-600/50 rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-200"
           >
             <option>All</option>
             <option>Active</option>
             <option>Completed</option>
           </select>
         </div>
-        <div>
-          <span className="text-sm font-medium text-gray-400 mr-2">Sort by:</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <ArrowUpDown size={14} className="text-gray-500 flex-shrink-0" />
           <select
             onChange={(e) => setSortBy(e.target.value)}
             value={sortBy}
-            className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 bg-gray-700/80 border border-gray-600/50 rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-200"
           >
             <option value="dueDate">Due Date</option>
             <option value="priority">Priority</option>
@@ -53,11 +57,12 @@ export default function AllTasksView({ tasks, projects }) {
           </select>
         </div>
       </div>
-      <div className="space-y-3">
+
+      <div className="space-y-2">
         {filteredAndSortedTasks.length > 0 ? (
           filteredAndSortedTasks.map((task) => <TaskItem key={task.id} task={task} projects={projects} />)
         ) : (
-          <p className="text-gray-400 text-center py-8">No tasks found.</p>
+          <p className="text-gray-500 text-sm text-center py-10">No tasks found.</p>
         )}
       </div>
     </div>

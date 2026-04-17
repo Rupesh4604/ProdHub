@@ -124,59 +124,83 @@ Generate a step-by-step plan.`;
         error={planningError}
         retry={handlePlanMyDay}
       />
-      <div className="space-y-8">
-        <div className="flex flex-wrap gap-4 justify-between items-center">
-          <h1 className="text-4xl font-bold text-white">Dashboard</h1>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
           <button
             onClick={handlePlanMyDay}
             disabled={isPlanning}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md font-semibold transition-colors disabled:bg-blue-800 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
-            {isPlanning ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Sparkles size={18} />}
+            {isPlanning ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+            ) : (
+              <Sparkles size={15} />
+            )}
             Plan My Day
           </button>
         </div>
+
+        {/* Overdue Banner */}
         {overdueTasks.length > 0 && (
-          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
-            <h2 className="text-xl font-semibold text-red-300 mb-3">Overdue Tasks ({overdueTasks.length})</h2>
-            <div className="space-y-2">
+          <div className="bg-red-950/60 border border-red-700/50 rounded-2xl p-3.5 backdrop-blur-sm">
+            <h2 className="text-sm font-semibold text-red-300 mb-2 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+              Overdue Tasks ({overdueTasks.length})
+            </h2>
+            <div className="space-y-1.5">
               {overdueTasks.map((task) => (
                 <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />
               ))}
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-200">Upcoming Deadlines</h2>
+
+        {/* Main grid — stacked on mobile/panel, side-by-side on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Upcoming Deadlines */}
+          <div className="bg-gray-800/40 border border-gray-700/40 rounded-2xl p-4 backdrop-blur-sm">
+            <h2 className="text-base font-semibold text-gray-200 mb-3">Upcoming Deadlines</h2>
             {upcomingTasks.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {upcomingTasks.map((task) => (
                   <TaskItem key={task.id} task={task} projects={projects} isCompact={true} />
                 ))}
               </div>
             ) : (
-              <p className="text-gray-400">No upcoming deadlines. Great job!</p>
+              <p className="text-gray-500 text-sm text-center py-4">No upcoming deadlines. Great job!</p>
             )}
           </div>
-          <div className="bg-gray-800/60 rounded-lg p-6 space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-200">Projects Overview</h2>
-            <div className="space-y-4">
+
+          {/* Projects Overview */}
+          <div className="bg-gray-800/40 border border-gray-700/40 rounded-2xl p-4 backdrop-blur-sm">
+            <h2 className="text-base font-semibold text-gray-200 mb-3">Projects Overview</h2>
+            <div className="space-y-3">
               {goals.map((goal) => (
                 <GoalProgress key={goal.id} goal={goal} projects={goalProjects[goal.id] || []} onViewChange={onViewChange} />
               ))}
               {standaloneProjects.map((p) => (
-                <div key={p.id} className="cursor-pointer" onClick={() => onViewChange('project', p.id)}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-medium text-gray-300">{p.name}</span>
-                    <span className="text-sm text-gray-400">{Math.round(p.progress || 0)}%</span>
+                <div
+                  key={p.id}
+                  className="cursor-pointer group hover:-translate-y-0.5 transition-transform duration-200"
+                  onClick={() => onViewChange('project', p.id)}
+                >
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
+                    <span className="text-xs text-gray-500">{Math.round(p.progress || 0)}%</span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2.5">
-                    <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${p.progress || 0}%` }}></div>
+                  <div className="w-full bg-gray-700/60 rounded-full h-1.5">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-blue-400 h-1.5 rounded-full transition-all duration-700"
+                      style={{ width: `${p.progress || 0}%` }}
+                    />
                   </div>
                 </div>
               ))}
-              {projects.length === 0 && <p className="text-gray-400">No projects yet. Add one from the sidebar!</p>}
+              {projects.length === 0 && (
+                <p className="text-gray-500 text-sm text-center py-4">No projects yet. Add one from the sidebar!</p>
+              )}
             </div>
           </div>
         </div>
