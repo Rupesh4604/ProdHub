@@ -10,14 +10,22 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
+  const [newProjectCustomType, setNewProjectCustomType] = useState('');
   const [showGoalModal, setShowGoalModal] = useState(false);
+
+  const handleNavigate = (view, id) => {
+    setIsAddingProject(false);
+    onViewChange(view, id);
+  };
 
   const handleAddProject = async (e) => {
     e.preventDefault();
     if (!newProjectName.trim() || !userId || !db) return;
+    const selectedType = newProjectType === '__custom__' ? newProjectCustomType.trim() : newProjectType;
+    if (!selectedType) return;
     const project = {
       name: newProjectName,
-      type: newProjectType,
+      type: selectedType,
       createdAt: new Date(),
       status: 'In Progress',
       progress: 0,
@@ -26,6 +34,8 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
     try {
       await addDoc(collection(db, `artifacts/${appId}/users/${userId}/projects`), project);
       setNewProjectName('');
+      setNewProjectType('Course');
+      setNewProjectCustomType('');
       setIsAddingProject(false);
     } catch (error) {
       console.error('Error adding project:', error);
@@ -53,31 +63,31 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
           </h1>
           <nav className="space-y-2">
             <button
-              onClick={() => onViewChange('dashboard')}
+              onClick={() => handleNavigate('dashboard')}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"
             >
               <CheckSquare size={20} /> Dashboard
             </button>
             <button
-              onClick={() => onViewChange('weekly_review')}
+              onClick={() => handleNavigate('weekly_review')}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"
             >
               <TrendingUp size={20} /> Weekly Review
             </button>
             <button
-              onClick={() => onViewChange('habit_tracker')}
+              onClick={() => handleNavigate('habit_tracker')}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"
             >
               <Repeat size={20} /> Habit Tracker
             </button>
             <button
-              onClick={() => onViewChange('all_tasks')}
+              onClick={() => handleNavigate('all_tasks')}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"
             >
               <CheckSquare size={20} /> All Tasks
             </button>
             <button
-              onClick={() => onViewChange('schedule')}
+              onClick={() => handleNavigate('schedule')}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"
             >
               <Calendar size={20} /> Schedule
@@ -96,7 +106,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                   key={goal.id}
                   goal={goal}
                   projects={goalProjects[goal.id] || []}
-                  onViewChange={onViewChange}
+                  onViewChange={handleNavigate}
                   userId={userId}
                 />
               ))}
@@ -107,7 +117,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
               {standaloneProjects.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => onViewChange('project', p.id)}
+                  onClick={() => handleNavigate('project', p.id)}
                   className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
                 >
                   <div
@@ -142,12 +152,22 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                     onChange={(e) => setNewProjectType(e.target.value)}
                     className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option>Course</option>
-                    <option>Conference</option>
-                    <option>Seminar</option>
-                    <option>Bootcamp</option>
-                    <option>Personal</option>
+                    <option value="Course">Course</option>
+                    <option value="Conference">Conference</option>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Bootcamp">Bootcamp</option>
+                    <option value="Personal">Personal</option>
+                    <option value="__custom__">Custom tag...</option>
                   </select>
+                  {newProjectType === '__custom__' && (
+                    <input
+                      type="text"
+                      value={newProjectCustomType}
+                      onChange={(e) => setNewProjectCustomType(e.target.value)}
+                      placeholder="Enter custom tag"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">
                     Save
                   </button>

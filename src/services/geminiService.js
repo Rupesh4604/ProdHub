@@ -17,13 +17,13 @@ export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
                 return await response.json();
             }
 
-            if (response.status === 429) {
+            if (response.status === 429 || response.status === 503) {
                 retries++;
                 if (retries >= maxRetries) {
-                    throw new Error("Rate limit exceeded. Please try again later.");
+                    throw new Error(response.status === 429 ? "Rate limit exceeded. Please try again later." : "Service unavailable (503). High demand, please try again later.");
                 }
                 const waitTime = Math.pow(2, retries) * 1000 + Math.random() * 1000;
-                console.warn(`Gemini API 429: Retrying in ${Math.round(waitTime)}ms...`);
+                console.warn(`Gemini API ${response.status}: Retrying in ${Math.round(waitTime)}ms...`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
             }
@@ -31,9 +31,9 @@ export const callGeminiWithRetry = async (payload, apiKey, maxRetries = 3) => {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
         } catch (error) {
-            if (error.message.includes("Rate limit exceeded") || (retries < maxRetries && error.name === 'TypeError')) {
-                // If it's a network error (TypeError) or we already handled 429, we might want to try again unless it's the last retry
-                if (error.message.includes("Rate limit exceeded")) throw error;
+            if (error.message.includes("Rate limit") || error.message.includes("Service unavailable") || (retries < maxRetries && error.name === 'TypeError')) {
+                // If we already handled 429/503 and exhausted retries, throw it
+                if (error.message.includes("Rate limit") || error.message.includes("Service unavailable")) throw error;
                 
                 retries++;
                 const waitTime = Math.pow(2, retries) * 1000;
