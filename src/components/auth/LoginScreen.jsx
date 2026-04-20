@@ -30,7 +30,7 @@ export default function LoginScreen({ onGoogleSignIn, onEmailSignIn, onEmailSign
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
       <div className="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded-lg shadow-lg">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-blue-400">Welcome to ProdHub</h1>
@@ -104,6 +104,13 @@ export default function LoginScreen({ onGoogleSignIn, onEmailSignIn, onEmailSign
           </button>
         </p>
       </div>
+
+      {/* Footer – visible to Google's crawler */}
+      <footer className="mt-6 text-center text-sm text-gray-500 space-x-4">
+        <a href="/privacy.html" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
+        <span>·</span>
+        <a href="/terms.html" className="hover:text-gray-300 transition-colors">Terms of Service</a>
+      </footer>
     </div>
   );
 }
