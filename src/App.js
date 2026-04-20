@@ -13,6 +13,7 @@ import AllTasksView from './features/tasks/AllTasksView';
 import ScheduleView from './features/schedule/ScheduleView';
 import HabitTrackerView from './features/habits/HabitTrackerView';
 import WeeklyReviewView from './features/review/WeeklyReviewView';
+import LandingPage from './components/layout/LandingPage';
 import { Menu, Book } from 'lucide-react';
 
 function HubApp({ user, handleSignOut }) {
@@ -132,33 +133,40 @@ function HubApp({ user, handleSignOut }) {
                 />
             </div>
             
-            <main className={`${isSidebarOpen ? 'hidden md:block' : 'block'} flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen`}>
-                {activeView === 'dashboard' && (
-                    <Dashboard
-                        projects={projects}
-                        tasks={tasks}
-                        goals={goals}
-                        onViewChange={handleSetView}
-                        syncedEvents={syncedEvents}
-                    />
-                )}
-                {activeView === 'project' && selectedProject && (
-                    <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />
-                )}
-                {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
-                {activeView === 'schedule' && (
-                    <ScheduleView
-                        projects={projects}
-                        tasks={tasks}
-                        syncedEvents={syncedEvents}
-                        setSyncedEvents={setSyncedEvents}
-                        tokenClient={tokenClient}
-                    />
-                )}
-                {activeView === 'habit_tracker' && <HabitTrackerView habits={habits} entries={habitEntries} />}
-                {activeView === 'weekly_review' && (
-                    <WeeklyReviewView tasks={tasks} projects={projects} habits={habits} entries={habitEntries} />
-                )}
+            <main className={`${isSidebarOpen ? 'hidden md:block' : 'block'} flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen flex flex-col`}>
+                <div className="flex-1">
+                    {activeView === 'dashboard' && (
+                        <Dashboard
+                            projects={projects}
+                            tasks={tasks}
+                            goals={goals}
+                            onViewChange={handleSetView}
+                            syncedEvents={syncedEvents}
+                        />
+                    )}
+                    {activeView === 'project' && selectedProject && (
+                        <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />
+                    )}
+                    {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
+                    {activeView === 'schedule' && (
+                        <ScheduleView
+                            projects={projects}
+                            tasks={tasks}
+                            syncedEvents={syncedEvents}
+                            setSyncedEvents={setSyncedEvents}
+                            tokenClient={tokenClient}
+                        />
+                    )}
+                    {activeView === 'habit_tracker' && <HabitTrackerView habits={habits} entries={habitEntries} />}
+                    {activeView === 'weekly_review' && (
+                        <WeeklyReviewView tasks={tasks} projects={projects} habits={habits} entries={habitEntries} />
+                    )}
+                </div>
+                <footer className="mt-8 pt-4 border-t border-gray-800 text-center text-xs text-gray-600 space-x-4">
+                    <a href="/privacy.html" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
+                    <span>·</span>
+                    <a href="/terms.html" className="hover:text-gray-400 transition-colors">Terms of Service</a>
+                </footer>
             </main>
         </div>
     );
@@ -166,6 +174,17 @@ function HubApp({ user, handleSignOut }) {
 
 export default function App() {
     const { user, isAuthReady, signInWithGoogle, emailSignIn, emailSignUp, signOutUser } = useAuth();
+    const [hash, setHash] = useState(window.location.hash);
+
+    useEffect(() => {
+        const handleHashChange = () => setHash(window.location.hash);
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    const navigate = (newHash) => {
+        window.location.hash = newHash;
+    };
 
     if (!isFirebaseConfigured || !GOOGLE_CLIENT_ID) {
         return <ConfigurationNeeded missingFirebase={!isFirebaseConfigured} missingGoogle={!GOOGLE_CLIENT_ID} />;
@@ -179,13 +198,25 @@ export default function App() {
         );
     }
 
-    return user ? (
-        <HubApp user={user} handleSignOut={signOutUser} />
-    ) : (
-        <LoginScreen
-            onGoogleSignIn={signInWithGoogle}
-            onEmailSignIn={emailSignIn}
-            onEmailSignUp={emailSignUp}
-        />
-    );
+    if (user) {
+        // If the user logs in and is lingering on a landing/login route, push to main app
+        if (hash === '#login') {
+            window.location.hash = ''; // Clear hash for cleanly showing the app
+        }
+        return <HubApp user={user} handleSignOut={signOutUser} />;
+    }
+
+    // Unauthenticated User Routing
+    if (hash === '#login') {
+        return (
+            <LoginScreen
+                onGoogleSignIn={signInWithGoogle}
+                onEmailSignIn={emailSignIn}
+                onEmailSignUp={emailSignUp}
+                onBack={() => navigate('')}
+            />
+        );
+    }
+
+    return <LandingPage />;
 }

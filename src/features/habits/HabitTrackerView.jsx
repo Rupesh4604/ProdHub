@@ -375,12 +375,12 @@ function HabitCalendar({ habit, entries }) {
     <div className="bg-gray-900/50 p-3 rounded-xl">
       <div className="flex justify-between items-center mb-2">
         <button onClick={goToPreviousMonth} className="p-1 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors text-sm">‹</button>
-        <h3 className="text-xs font-semibold text-center text-gray-300 truncate px-1">
+        <h3 className="text-sm font-bold text-center text-white truncate px-1">
           {habit.name} — {date.toLocaleString('default', { month: 'short' })} {date.getFullYear()}
         </h3>
         <button onClick={goToNextMonth} className="p-1 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors text-sm">›</button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-600 mb-1">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-white mb-1 font-medium">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -392,7 +392,7 @@ function HabitCalendar({ habit, entries }) {
           return (
             <div
               key={d}
-              className={`w-full aspect-square flex items-center justify-center rounded-lg text-xs transition-colors ${isCompleted ? 'bg-emerald-500 text-white font-semibold' : 'bg-gray-800 text-gray-600'} ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+              className={`w-full aspect-square flex items-center justify-center rounded-lg text-xs transition-colors ${isCompleted ? 'bg-emerald-500 text-white font-semibold' : 'bg-gray-800 text-white'} ${isToday ? 'ring-2 ring-blue-500' : ''}`}
             >
               {d}
             </div>
