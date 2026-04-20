@@ -81,32 +81,9 @@
 
       <div class="spinner" style="margin-top: 1.5rem;"></div>
       <p class="tagline" style="margin-top: 1rem;">Your app is loading…</p>
-      
-      <div style="margin-top: 2rem; display: flex; gap: 1.5rem; font-size: 0.85rem;">
-        <a href="/privacy.html" style="color: #64748b; text-decoration: none;">Privacy Policy</a>
-        <a href="/terms.html" style="color: #64748b; text-decoration: none;">Terms of Service</a>
-      </div>
     </div>
 
     <div id="root"></div>
-
-    <script>
-      // Hide splash once React renders
-      document.addEventListener('DOMContentLoaded', function () {
-        var observer = new MutationObserver(function () {
-          var root = document.getElementById('root');
-          if (root && root.childElementCount > 0) {
-            var splash = document.getElementById('splash');
-            if (splash) {
-              splash.style.opacity = '0';
-              setTimeout(function () { splash.remove(); }, 350);
-            }
-            observer.disconnect();
-          }
-        });
-        observer.observe(document.getElementById('root'), { childList: true });
-      });
-    </script>
   </body>
 </html>
 

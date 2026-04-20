@@ -163,9 +163,9 @@ function HubApp({ user, handleSignOut }) {
                     )}
                 </div>
                 <footer className="mt-8 pt-4 border-t border-gray-800 text-center text-xs text-gray-600 space-x-4">
-                    <a href="/privacy.html" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
+                    <a href="https://my-productivity-hub-5a3ba.web.app/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
                     <span>·</span>
-                    <a href="/terms.html" className="hover:text-gray-400 transition-colors">Terms of Service</a>
+                    <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms of Service</a>
                 </footer>
             </main>
         </div>

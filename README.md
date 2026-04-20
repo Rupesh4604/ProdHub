@@ -7,7 +7,9 @@ ProdHub is a modern, all-in-one web application built to help you organize, achi
 🌐 Web App: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)  
 🧩 Chrome Extension: [ProdHub on the Chrome Web Store](#) *(coming soon)*
 
-![ProdHub](images/dashboard_2.png)
+![ProdHub](images/Intro_page.jpeg)
+
+![ProdHub](images/Prodhub.png)
 
 ---
 
