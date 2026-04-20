@@ -13,6 +13,7 @@ import AllTasksView from './features/tasks/AllTasksView';
 import ScheduleView from './features/schedule/ScheduleView';
 import HabitTrackerView from './features/habits/HabitTrackerView';
 import WeeklyReviewView from './features/review/WeeklyReviewView';
+import LandingPage from './components/layout/LandingPage';
 import { Menu, Book } from 'lucide-react';
 
 function HubApp({ user, handleSignOut }) {
@@ -173,6 +174,17 @@ function HubApp({ user, handleSignOut }) {
 
 export default function App() {
     const { user, isAuthReady, signInWithGoogle, emailSignIn, emailSignUp, signOutUser } = useAuth();
+    const [hash, setHash] = useState(window.location.hash);
+
+    useEffect(() => {
+        const handleHashChange = () => setHash(window.location.hash);
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    const navigate = (newHash) => {
+        window.location.hash = newHash;
+    };
 
     if (!isFirebaseConfigured || !GOOGLE_CLIENT_ID) {
         return <ConfigurationNeeded missingFirebase={!isFirebaseConfigured} missingGoogle={!GOOGLE_CLIENT_ID} />;
@@ -186,13 +198,25 @@ export default function App() {
         );
     }
 
-    return user ? (
-        <HubApp user={user} handleSignOut={signOutUser} />
-    ) : (
-        <LoginScreen
-            onGoogleSignIn={signInWithGoogle}
-            onEmailSignIn={emailSignIn}
-            onEmailSignUp={emailSignUp}
-        />
-    );
+    if (user) {
+        // If the user logs in and is lingering on a landing/login route, push to main app
+        if (hash === '#login') {
+            window.location.hash = ''; // Clear hash for cleanly showing the app
+        }
+        return <HubApp user={user} handleSignOut={signOutUser} />;
+    }
+
+    // Unauthenticated User Routing
+    if (hash === '#login') {
+        return (
+            <LoginScreen
+                onGoogleSignIn={signInWithGoogle}
+                onEmailSignIn={emailSignIn}
+                onEmailSignUp={emailSignUp}
+                onBack={() => navigate('')}
+            />
+        );
+    }
+
+    return <LandingPage />;
 }
