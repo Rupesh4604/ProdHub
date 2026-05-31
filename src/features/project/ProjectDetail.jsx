@@ -9,6 +9,7 @@ import TaskItem from '../../components/shared/TaskItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import AiContextModal from '../../components/modals/AiContextModal';
 import ProjectNotes from './ProjectNotes';
+import SortableTaskList from './SortableTaskList';
 
 export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -69,6 +70,18 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
 
     return sorted;
   }, [allTasks, project.id, sortMode]);
+
+  // For manual (drag) mode: incomplete tasks ordered by persisted `order`
+  // (draggable), and completed tasks shown below.
+  const { manualIncomplete, manualCompleted } = useMemo(() => {
+    const projectTasks = allTasks.filter((t) => t.projectId === project.id);
+    const byOrder = (a, b) =>
+      (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY);
+    return {
+      manualIncomplete: projectTasks.filter((t) => !t.completed).sort(byOrder),
+      manualCompleted: projectTasks.filter((t) => t.completed).sort(byOrder),
+    };
+  }, [allTasks, project.id]);
 
   useEffect(() => {
     if (!userId || !project || !db) return;
@@ -317,6 +330,7 @@ Based on the user's main instruction and the background context, generate a list
               <option value="deadline">Deadline: Earliest First</option>
               <option value="priority-low-high">Priority: Low → High</option>
               <option value="priority-high-low">Priority: High → Low</option>
+              <option value="manual">Manual (drag to reorder)</option>
               <option value="random">Random</option>
             </select>
             <button
@@ -368,13 +382,17 @@ Based on the user's main instruction and the background context, generate a list
             </button>
           </form>
         )}
-        <div className="space-y-3">
-          {tasks.length > 0 ? (
-            tasks.map((task) => <TaskItem key={task.id} task={task} />)
-          ) : (
-            <p className="text-gray-400 text-center py-4">No tasks for this project yet. Try generating some with AI!</p>
-          )}
-        </div>
+        {sortMode === 'manual' ? (
+          <SortableTaskList tasks={manualIncomplete} completedTasks={manualCompleted} />
+        ) : (
+          <div className="space-y-3">
+            {tasks.length > 0 ? (
+              tasks.map((task) => <TaskItem key={task.id} task={task} />)
+            ) : (
+              <p className="text-gray-400 text-center py-4">No tasks for this project yet. Try generating some with AI!</p>
+            )}
+          </div>
+        )}
       </div>
       )}
     </div>
