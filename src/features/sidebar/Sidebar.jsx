@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Sparkles, Trash2, TrendingUp } from 'lucide-react';
+import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
 import GoalPlannerModal from '../../components/modals/GoalPlannerModal';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 
-export default function Sidebar({ onViewChange, projects, goals, userId, handleSignOut }) {
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
+
+export default function Sidebar({ onViewChange, projects, goals, userId, handleSignOut, onOpenSearch }) {
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
@@ -67,6 +70,16 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
             </h1>
           </div>
           <nav className="space-y-2">
+            {onOpenSearch && (
+              <button
+                onClick={onOpenSearch}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+              >
+                <Search size={18} />
+                <span className="flex-grow text-left text-sm">Search…</span>
+                <kbd className="text-[10px] text-gray-500 border border-gray-600 rounded px-1.5 py-0.5">{SEARCH_SHORTCUT}</kbd>
+              </button>
+            )}
             <button
               onClick={() => handleNavigate('dashboard')}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors"

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
-import { Calendar, Edit2, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { Calendar, Edit2, GripVertical, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
 import { appId, isGeminiConfigured } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
@@ -394,6 +394,11 @@ Based on the user's main instruction and the background context, generate a list
               Save Task
             </button>
           </form>
+        )}
+        {sortMode === 'manual' && (
+          <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
+            <GripVertical size={12} /> Drag the handle to reorder tasks — your order is saved automatically.
+          </p>
         )}
         {sortMode === 'manual' ? (
           <SortableTaskList tasks={manualIncomplete} completedTasks={manualCompleted} />
