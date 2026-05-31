@@ -14,6 +14,7 @@ import ScheduleView from './features/schedule/ScheduleView';
 import HabitTrackerView from './features/habits/HabitTrackerView';
 import WeeklyReviewView from './features/review/WeeklyReviewView';
 import LandingPage from './components/layout/LandingPage';
+import PomodoroTimer from './features/pomodoro/PomodoroTimer';
 import { Menu, Book } from 'lucide-react';
 
 function HubApp({ user, handleSignOut }) {
@@ -170,6 +171,7 @@ function HubApp({ user, handleSignOut }) {
                     <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms of Service</a>
                 </footer>
             </main>
+            <PomodoroTimer />
         </div>
     );
 }
