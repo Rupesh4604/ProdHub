@@ -132,24 +132,31 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
 
             <div className="pt-4">
               <h2 className="text-sm font-semibold text-gray-500 px-3 mb-2">Projects</h2>
-              {standaloneProjects.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => handleNavigate('project', p.id)}
-                  className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      p.type === 'Course'
-                        ? 'bg-green-400'
-                        : p.type === 'Seminar'
-                        ? 'bg-purple-400'
-                        : 'bg-yellow-400'
-                    }`}
-                  ></div>
-                  {p.name}
-                </button>
-              ))}
+              {/* Bounded scroll area so the Add Project button stays in view
+                  when there are many projects. */}
+              <div className="max-h-[35vh] overflow-y-auto space-y-0.5 pr-1">
+                {standaloneProjects.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleNavigate('project', p.id)}
+                    className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        p.type === 'Course'
+                          ? 'bg-green-400'
+                          : p.type === 'Seminar'
+                          ? 'bg-purple-400'
+                          : 'bg-yellow-400'
+                      }`}
+                    ></div>
+                    <span className="truncate">{p.name}</span>
+                  </button>
+                ))}
+                {standaloneProjects.length === 0 && (
+                  <p className="px-3 py-1.5 text-xs text-gray-600">No standalone projects yet.</p>
+                )}
+              </div>
               <button
                 onClick={() => setIsAddingProject(!isAddingProject)}
                 className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"
