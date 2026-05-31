@@ -45,8 +45,11 @@ export const callGeminiWithRetry = async (payload, maxRetries = 6) => {
                 return await response.json();
             }
 
-            if (response.status === 401 || response.status === 403) {
-                throw new Error('You are not authorized to use the AI features. Please sign in again.');
+            // 401 is the proxy's own auth failure (missing/invalid Firebase token).
+            // Other statuses (403 origin, 500 misconfig, Gemini errors) fall through
+            // so the real message from the response body is surfaced.
+            if (response.status === 401) {
+                throw new Error('Your session has expired. Please sign in again to use AI features.');
             }
 
             if (response.status === 429 || response.status === 503) {
@@ -63,7 +66,7 @@ export const callGeminiWithRetry = async (payload, maxRetries = 6) => {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
         } catch (error) {
-            if (error.message.includes("Rate limit") || error.message.includes("Service unavailable") || error.message.includes("not authorized")) {
+            if (error.message.includes("Rate limit") || error.message.includes("Service unavailable") || error.message.includes("sign in again")) {
                 throw error;
             }
             if (error.name === 'TypeError') {

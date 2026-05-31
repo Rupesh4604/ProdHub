@@ -8,6 +8,7 @@ import { formatDate } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import AiContextModal from '../../components/modals/AiContextModal';
+import ProjectNotes from './ProjectNotes';
 
 export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -18,6 +19,7 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [geminiError, setGeminiError] = useState('');
   const [showAiContextModal, setShowAiContextModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('tasks');
 
   const userId = auth?.currentUser?.uid;
   const tasks = useMemo(() => {
@@ -275,6 +277,33 @@ Based on the user's main instruction and the background context, generate a list
           <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${project.progress || 0}%` }}></div>
         </div>
       </div>
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-700/60">
+        {[
+          { id: 'tasks', label: 'To-Do List' },
+          { id: 'notes', label: 'Notes & Resources' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+              activeTab === tab.id
+                ? 'border-blue-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'notes' && (
+        <div className="bg-gray-800/60 rounded-lg p-6">
+          <ProjectNotes project={project} />
+        </div>
+      )}
+
+      {activeTab === 'tasks' && (
       <div className="bg-gray-800/60 rounded-lg p-6">
         <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold">To-Do List</h2>
@@ -347,6 +376,7 @@ Based on the user's main instruction and the background context, generate a list
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

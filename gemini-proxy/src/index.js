@@ -117,6 +117,14 @@ export default {
       return json({ error: { message: 'Invalid JSON body' } }, 400, origin);
     }
 
+    if (!env.GEMINI_API_KEY) {
+      return json(
+        { error: { message: 'Server misconfigured: missing GEMINI_API_KEY secret. Run `wrangler secret put GEMINI_API_KEY`.' } },
+        500,
+        origin
+      );
+    }
+
     const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
 
