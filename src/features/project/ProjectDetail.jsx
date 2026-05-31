@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
-import { Calendar, Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { Calendar, Edit2, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
 import { appId, isGeminiConfigured } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
-import { formatDate } from '../../utils/datetime';
+import { formatDate, RECURRENCE_OPTIONS } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import AiContextModal from '../../components/modals/AiContextModal';
@@ -13,7 +13,7 @@ import SortableTaskList from './SortableTaskList';
 
 export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', dueDate: '', priority: 'Medium' });
+  const [newTask, setNewTask] = useState({ title: '', dueDate: '', priority: 'Medium', recurrence: 'none' });
   const [sortMode, setSortMode] = useState('deadline');
   const [editingProject, setEditingProject] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
@@ -99,7 +99,7 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     if (!newTask.title.trim() || !userId || !db) return;
     const task = { ...newTask, projectId: project.id, completed: false, createdAt: new Date() };
     await addDoc(collection(db, `artifacts/${appId}/users/${userId}/tasks`), task);
-    setNewTask({ title: '', dueDate: '', priority: 'Medium' });
+    setNewTask({ title: '', dueDate: '', priority: 'Medium', recurrence: 'none' });
     setIsAddingTask(false);
   };
 
@@ -375,6 +375,19 @@ Based on the user's main instruction and the background context, generate a list
                 <option>High</option>
                 <option>Medium</option>
                 <option>Low</option>
+              </select>
+            </div>
+            <div className="md:col-span-3 flex items-center gap-2">
+              <Repeat size={16} className="text-gray-400 flex-shrink-0" />
+              <select
+                value={newTask.recurrence}
+                onChange={(e) => setNewTask({ ...newTask, recurrence: e.target.value })}
+                title="Repeat"
+                className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {RECURRENCE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
             <button type="submit" className="md:col-span-3 w-full bg-green-600 hover:bg-green-700 rounded-md py-2 font-semibold">

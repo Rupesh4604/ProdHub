@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, Edit2, Trash2, Book } from 'lucide-react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { Calendar, Edit2, Trash2, Book, Repeat } from 'lucide-react';
+import { doc, updateDoc, deleteDoc, addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import { appId } from '../../config/env';
-import { formatDate } from '../../utils/datetime';
+import { formatDate, nextDueDate, RECURRENCE_OPTIONS } from '../../utils/datetime';
 import ConfirmModal from '../modals/ConfirmModal';
 
 export default function TaskItem({ task, projects = [], isCompact = false }) {
@@ -11,15 +11,35 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
   const [editTitle, setEditTitle] = useState(task.title);
   const [editPriority, setEditPriority] = useState(task.priority || 'Medium');
   const [editDueDate, setEditDueDate] = useState(task.dueDate || '');
+  const [editRecurrence, setEditRecurrence] = useState(task.recurrence || 'none');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const userId = auth?.currentUser?.uid;
 
+  const isRecurring = task.recurrence && task.recurrence !== 'none';
+
   const handleToggleComplete = async () => {
     if (!userId || !db) return;
+    const completing = !task.completed;
     await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), {
-      completed: !task.completed,
-      completedAt: !task.completed ? new Date() : null,
+      completed: completing,
+      completedAt: completing ? new Date() : null,
     });
+
+    // When a recurring task is completed, spawn its next occurrence once.
+    if (completing && isRecurring && !task.recurrenceSpawned) {
+      await addDoc(collection(db, `artifacts/${appId}/users/${userId}/tasks`), {
+        title: task.title,
+        priority: task.priority || 'Medium',
+        projectId: task.projectId || null,
+        dueDate: nextDueDate(task.dueDate, task.recurrence),
+        recurrence: task.recurrence,
+        completed: false,
+        createdAt: new Date(),
+      });
+      await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), {
+        recurrenceSpawned: true,
+      });
+    }
   };
 
   const handleUpdate = async (e) => {
@@ -30,6 +50,7 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
       priority: editPriority,
       // Store as ISO date string (YYYY-MM-DD) or null to clear
       dueDate: editDueDate || null,
+      recurrence: editRecurrence,
     });
     setIsEditing(false);
   };
@@ -54,6 +75,7 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
         </button>
         <span className={`flex-1 truncate ${task.completed ? 'line-through text-gray-600' : 'text-gray-300'}`}>{task.title}</span>
         <div className="flex items-center gap-1.5 flex-shrink-0 text-gray-500">
+          {isRecurring && <Repeat size={11} className="text-indigo-400" />}
           {task.priority && <div className={`w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />}
           {task.dueDate && <span>{formatDate(new Date(task.dueDate))}</span>}
           {projectName && <span className="text-xs bg-gray-700/80 px-1.5 py-0.5 rounded-md text-gray-400 max-w-[60px] truncate">{projectName}</span>}
@@ -118,6 +140,20 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
                       )}
                     </div>
                   </div>
+                  {/* Row 2b: Recurrence */}
+                  <div className="flex items-center gap-1.5 bg-gray-700/80 border border-gray-600 rounded-xl px-2 py-1.5 text-xs">
+                    <Repeat size={11} className="text-gray-400 flex-shrink-0" />
+                    <select
+                      value={editRecurrence}
+                      onChange={(e) => setEditRecurrence(e.target.value)}
+                      className="flex-1 bg-transparent text-gray-300 focus:outline-none"
+                      title="Repeat"
+                    >
+                      {RECURRENCE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value} className="bg-gray-800">{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
                   {/* Row 3: Buttons */}
                   <div className="flex gap-2">
                     <button type="submit" className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs font-semibold transition-colors">
@@ -161,6 +197,19 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
                       <button type="button" onClick={() => setEditDueDate('')} className="text-gray-500 hover:text-red-400 transition-colors" title="Clear date">×</button>
                     )}
                   </div>
+                  <div className="flex items-center gap-1 bg-gray-700/80 border border-gray-600 rounded-xl px-2 py-1.5 text-xs">
+                    <Repeat size={11} className="text-gray-400 flex-shrink-0" />
+                    <select
+                      value={editRecurrence}
+                      onChange={(e) => setEditRecurrence(e.target.value)}
+                      className="bg-transparent text-gray-300 focus:outline-none"
+                      title="Repeat"
+                    >
+                      {RECURRENCE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value} className="bg-gray-800">{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
                   <button type="submit" className="flex-shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs font-semibold transition-colors">
                     Save
                   </button>
@@ -184,6 +233,12 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
                 <div className={`flex items-center gap-1 font-medium ${priorityColor[task.priority]}`}>
                   <div className={`w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />
                   {task.priority}
+                </div>
+              )}
+              {isRecurring && (
+                <div className="flex items-center gap-1 text-indigo-400" title={`Repeats ${task.recurrence}`}>
+                  <Repeat size={11} />
+                  <span className="capitalize">{task.recurrence}</span>
                 </div>
               )}
               {projectName && (
