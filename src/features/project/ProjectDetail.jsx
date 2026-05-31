@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { doc, updateDoc, addDoc, collection, deleteDoc } from 'firebase/firestore';
-import { Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
+import { Calendar, Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
 import { appId, GEMINI_API_KEY } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
+import { formatDate } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import AiContextModal from '../../components/modals/AiContextModal';
@@ -93,6 +94,7 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id), {
       name: editingProject.name,
       type: editingProject.type,
+      deadline: editingProject.deadline || null,
     });
     setEditingProject(null);
   };
@@ -100,10 +102,12 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const handleDeleteProject = async () => {
     if (!userId || !db) return;
     setShowDeleteModal(null);
+    const batch = writeBatch(db);
     for (const task of tasks) {
-      await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
+      batch.delete(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
     }
-    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id));
+    batch.delete(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id));
+    await batch.commit();
   };
 
   const handleGenerateTasks = async (customContext) => {
@@ -226,26 +230,38 @@ Based on the user's main instruction and the background context, generate a list
             <option>Bootcamp</option>
             <option>Personal</option>
           </select>
-          <button type="submit" className="p-2 bg-green-600 hover:bg-green-700 rounded-md">
+          <input
+            type="date"
+            value={editingProject.deadline || ''}
+            onChange={(e) => setEditingProject({ ...editingProject, deadline: e.target.value })}
+            title="Project deadline (optional)"
+            className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+          />
+          <button type="submit" aria-label="Save project" className="p-2 bg-green-600 hover:bg-green-700 rounded-md">
             <Save size={20} />
           </button>
-          <button onClick={() => setEditingProject(null)} className="p-2 bg-gray-600 hover:bg-gray-700 rounded-md">
+          <button onClick={() => setEditingProject(null)} aria-label="Cancel editing" className="p-2 bg-gray-600 hover:bg-gray-700 rounded-md">
             <X size={20} />
           </button>
         </form>
       ) : (
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <h1 className="text-4xl font-bold text-white">{project.name}</h1>
             <span className="text-sm font-medium bg-blue-900/70 text-blue-300 px-3 py-1 rounded-full">
               {project.type}
             </span>
+            {project.deadline && (
+              <span className="flex items-center gap-1 text-sm font-medium bg-purple-900/60 text-purple-300 px-3 py-1 rounded-full">
+                <Calendar size={14} /> Due {formatDate(new Date(project.deadline))}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setEditingProject({ ...project })} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
+            <button onClick={() => setEditingProject({ ...project })} aria-label="Edit project" className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
               <Edit2 size={20} />
             </button>
-            <button onClick={() => setShowDeleteModal('project')} className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded-md">
+            <button onClick={() => setShowDeleteModal('project')} aria-label="Delete project" className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded-md">
               <Trash2 size={20} />
             </button>
           </div>

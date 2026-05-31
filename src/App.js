@@ -114,8 +114,10 @@ function HubApp({ user, handleSignOut }) {
                 <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
                     <Book size={20} /> ProdHub
                 </h1>
-                <button 
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+                    aria-expanded={isSidebarOpen}
                     className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
                 >
                     <Menu size={24} />

@@ -47,7 +47,7 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
   if (isCompact) {
     return (
       <div className="flex items-center gap-2 text-xs p-2 rounded-xl bg-gray-900/40 border border-gray-700/30 hover:border-gray-600/50 hover:bg-gray-900/60 transition-all duration-150">
-        <button onClick={handleToggleComplete} className="flex-shrink-0">
+        <button onClick={handleToggleComplete} aria-label={task.completed ? 'Mark task incomplete' : 'Mark task complete'} aria-pressed={task.completed} className="flex-shrink-0">
           <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${task.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600 hover:border-gray-400'}`}>
             {task.completed && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
           </div>
@@ -73,7 +73,7 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
       />
       <div className={`p-3 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${task.completed ? 'bg-gray-800/30 border-gray-700/20' : 'bg-gray-800/50 border-gray-700/40 hover:border-gray-600/60'}`}>
         <div className="flex items-start gap-3">
-          <button onClick={handleToggleComplete} className="mt-0.5 flex-shrink-0">
+          <button onClick={handleToggleComplete} aria-label={task.completed ? 'Mark task incomplete' : 'Mark task complete'} aria-pressed={task.completed} className="mt-0.5 flex-shrink-0">
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${task.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500 hover:border-blue-400'}`}>
               {task.completed && <div className="w-2 h-2 rounded-full bg-white" />}
             </div>
@@ -197,12 +197,14 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
               onClick={() => setIsEditing(!isEditing)}
+              aria-label={isEditing ? 'Cancel editing task' : 'Edit task'}
               className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
             >
               <Edit2 size={13} />
             </button>
             <button
               onClick={() => setShowDeleteModal(true)}
+              aria-label="Delete task"
               className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
             >
               <Trash2 size={13} />
