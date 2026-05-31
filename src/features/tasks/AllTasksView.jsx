@@ -20,6 +20,8 @@ export default function AllTasksView({ tasks, projects }) {
     if (filter === 'Active') filtered = tasks.filter((t) => !t.completed);
     if (filter === 'Completed') filtered = tasks.filter((t) => t.completed);
     return [...filtered].sort((a, b) => {
+      // Always keep completed tasks below incomplete ones.
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
       if (sortBy === 'dueDate')
         return (a.dueDate ? new Date(a.dueDate) : new Date('2999-12-31')) -
           (b.dueDate ? new Date(b.dueDate) : new Date('2999-12-31'));

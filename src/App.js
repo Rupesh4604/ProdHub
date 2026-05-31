@@ -179,6 +179,7 @@ function HubApp({ user, handleSignOut }) {
                     goals={goals}
                     userId={user.uid}
                     handleSignOut={handleSignOut}
+                    onOpenSearch={() => setIsPaletteOpen(true)}
                 />
             </div>
             
