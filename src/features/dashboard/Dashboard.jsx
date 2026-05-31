@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { callGeminiWithRetry } from '../../services/geminiService';
-import { GEMINI_API_KEY } from '../../config/env';
+import { isGeminiConfigured } from '../../config/env';
 import { formatTime, getLocalDateKey } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
 import GoalProgress from './GoalProgress';
@@ -44,9 +44,8 @@ export default function Dashboard({ projects, tasks, goals, onViewChange, synced
     setDailyPlan('');
     setPlanningError('');
 
-    const apiKey = GEMINI_API_KEY;
-    if (!apiKey) {
-      setPlanningError('Gemini API key is not configured.');
+    if (!isGeminiConfigured) {
+      setPlanningError('AI is not configured.');
       setIsPlanning(false);
       return;
     }
@@ -101,7 +100,7 @@ Generate a step-by-step plan.`;
     const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
 
     try {
-      const result = await callGeminiWithRetry(payload, apiKey);
+      const result = await callGeminiWithRetry(payload);
 
       if (result.candidates && result.candidates[0].content.parts[0].text) {
         setDailyPlan(result.candidates[0].content.parts[0].text);

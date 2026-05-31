@@ -1,0 +1,12 @@
+name = "prodhub-gemini-proxy"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret config. Edit these for your project, then `wrangler deploy`.
+# The Gemini key is NOT here — set it as a secret:
+#   wrangler secret put GEMINI_API_KEY
+[vars]
+FIREBASE_PROJECT_ID = "my-productivity-hub-5a3ba"
+ALLOWED_ORIGIN = "https://my-productivity-hub-5a3ba.web.app"
+GEMINI_MODEL = "gemini-2.5-flash"

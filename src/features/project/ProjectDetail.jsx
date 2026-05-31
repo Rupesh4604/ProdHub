@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
 import { Calendar, Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
-import { appId, GEMINI_API_KEY } from '../../config/env';
+import { appId, isGeminiConfigured } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
 import { formatDate } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
@@ -112,9 +112,8 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
 
   const handleGenerateTasks = async (customContext) => {
     setShowAiContextModal(false);
-    const apiKey = GEMINI_API_KEY;
-    if (!apiKey) {
-      setGeminiError('Gemini API key is not configured. Please add REACT_APP_GEMINI_API_KEY to your .env.local file.');
+    if (!isGeminiConfigured) {
+      setGeminiError('AI is not configured. Set REACT_APP_GEMINI_PROXY_URL (production) or REACT_APP_GEMINI_API_KEY (local dev).');
       return;
     }
     if (!userId || !db) return;
@@ -171,7 +170,7 @@ Based on the user's main instruction and the background context, generate a list
       },
     };
     try {
-      const result = await callGeminiWithRetry(payload, apiKey);
+      const result = await callGeminiWithRetry(payload);
       if (result.candidates && result.candidates[0].content.parts[0].text) {
         const generated = JSON.parse(result.candidates[0].content.parts[0].text);
         if (generated.tasks && generated.tasks.length > 0) {
