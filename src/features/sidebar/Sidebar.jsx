@@ -11,6 +11,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
   const [newProjectCustomType, setNewProjectCustomType] = useState('');
+  const [newProjectDeadline, setNewProjectDeadline] = useState('');
   const [showGoalModal, setShowGoalModal] = useState(false);
 
   const handleNavigate = (view, id) => {
@@ -26,6 +27,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
     const project = {
       name: newProjectName,
       type: selectedType,
+      deadline: newProjectDeadline || null,
       createdAt: new Date(),
       status: 'In Progress',
       progress: 0,
@@ -36,6 +38,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
       setNewProjectName('');
       setNewProjectType('Course');
       setNewProjectCustomType('');
+      setNewProjectDeadline('');
       setIsAddingProject(false);
     } catch (error) {
       console.error('Error adding project:', error);
@@ -170,6 +173,15 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                       className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   )}
+                  <label className="block text-xs text-gray-500">
+                    Deadline (optional)
+                    <input
+                      type="date"
+                      value={newProjectDeadline}
+                      onChange={(e) => setNewProjectDeadline(e.target.value)}
+                      className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+                    />
+                  </label>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">
                     Save
                   </button>
@@ -250,10 +262,10 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
           </button>
         )}
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setIsEditing(true)} className="p-1 text-gray-400 hover:text-white">
+          <button onClick={() => setIsEditing(true)} aria-label={`Edit goal ${goal.name}`} className="p-1 text-gray-400 hover:text-white">
             <Edit2 size={16} />
           </button>
-          <button onClick={() => setShowDeleteModal(true)} className="p-1 text-gray-400 hover:text-red-400">
+          <button onClick={() => setShowDeleteModal(true)} aria-label={`Delete goal ${goal.name}`} className="p-1 text-gray-400 hover:text-red-400">
             <Trash2 size={16} />
           </button>
         </div>

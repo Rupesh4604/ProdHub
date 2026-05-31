@@ -241,8 +241,20 @@ REACT_APP_FIREBASE_APP_ID="YOUR_APP_ID"
 
 # GOOGLE API KEYS
 REACT_APP_GOOGLE_CLIENT_ID="YOUR_GOOGLE_CLIENT_ID"
+
+# GEMINI — production: point at the Worker proxy so the key is NOT bundled.
+# See gemini-proxy/README.md for deploy steps (free Cloudflare Worker).
+REACT_APP_GEMINI_PROXY_URL="https://prodhub-gemini-proxy.<subdomain>.workers.dev"
+
+# GEMINI — local dev only: direct calls with a key. Leave this OUT of any
+# production build, or the key ends up in the client bundle.
 REACT_APP_GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ```
+
+> [!IMPORTANT]
+> Do **not** set `REACT_APP_GEMINI_API_KEY` in a production build — it would ship
+> the key in the client JS. In production set `REACT_APP_GEMINI_PROXY_URL` only
+> and route AI calls through the Cloudflare Worker in [`gemini-proxy/`](gemini-proxy/).
 
 Update `src/App.js` to use these variables for your `firebaseConfig`.
 

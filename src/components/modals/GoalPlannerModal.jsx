@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { callGeminiWithRetry } from '../../services/geminiService';
-import { GEMINI_API_KEY, appId } from '../../config/env';
+import { isGeminiConfigured, appId } from '../../config/env';
 import { db } from '../../config/firebase';
 
 export default function GoalPlannerModal({ isOpen, onClose, userId }) {
@@ -10,9 +10,8 @@ export default function GoalPlannerModal({ isOpen, onClose, userId }) {
   const [error, setError] = useState('');
 
   const handleGeneratePlan = async () => {
-    const apiKey = GEMINI_API_KEY;
-    if (!apiKey) {
-      setError('Gemini API key is not configured.');
+    if (!isGeminiConfigured) {
+      setError('AI is not configured.');
       return;
     }
     if (!goal.trim()) {
@@ -64,7 +63,7 @@ The output must be a JSON object. For each project, provide a 'name' and a 'type
     };
 
     try {
-      const result = await callGeminiWithRetry(payload, apiKey);
+      const result = await callGeminiWithRetry(payload);
 
       if (result.candidates && result.candidates[0].content.parts[0].text) {
         const plan = JSON.parse(result.candidates[0].content.parts[0].text);

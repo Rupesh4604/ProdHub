@@ -4,6 +4,9 @@
   "private": true,
   "homepage": ".",
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@react-oauth/google": "^0.12.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -21,6 +24,7 @@
     "build": "react-scripts build",
     "build:extension": "react-scripts build && node -e \"require('fs').copyFileSync('./build/manifest.extension.json', './build/manifest.json')\"",
     "test": "react-scripts test",
+    "test:ci": "react-scripts test --watchAll=false",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

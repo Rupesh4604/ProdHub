@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, limit, onSnapshot, query } from 'firebase/firestore';
 import { useAuth } from './contexts/AuthContext';
 import { appId, GOOGLE_CLIENT_ID, isFirebaseConfigured } from './config/env';
 import { db } from './config/firebase';
 import { createCalendarTokenClient, loadGoogleIdentityScript } from './services/googleCalendar';
+import { subscribeCalendarEvents } from './services/calendarStore';
 import LoginScreen from './components/auth/LoginScreen';
 import ConfigurationNeeded from './components/layout/ConfigurationNeeded';
 import Sidebar from './features/sidebar/Sidebar';
@@ -14,7 +15,20 @@ import ScheduleView from './features/schedule/ScheduleView';
 import HabitTrackerView from './features/habits/HabitTrackerView';
 import WeeklyReviewView from './features/review/WeeklyReviewView';
 import LandingPage from './components/layout/LandingPage';
-import { Menu, Book } from 'lucide-react';
+import PomodoroTimer from './features/pomodoro/PomodoroTimer';
+import CommandPalette from './features/search/CommandPalette';
+import { Menu, Book, Search } from 'lucide-react';
+
+// Safety caps on per-user reads. Generous for a personal productivity app, but
+// they bound worst-case Firestore reads instead of subscribing to whole
+// collections unbounded. (Bare limits don't drop docs missing a field.)
+const READ_LIMITS = {
+    projects: 500,
+    tasks: 2000,
+    habits: 200,
+    goals: 200,
+    habitEntries: 5000,
+};
 
 function HubApp({ user, handleSignOut }) {
     const [projects, setProjects] = useState([]);
@@ -25,10 +39,34 @@ function HubApp({ user, handleSignOut }) {
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
     const [syncedEvents, setSyncedEvents] = useState([]);
+    const [lastSyncedAt, setLastSyncedAt] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
     const [isGsiScriptLoaded, setIsGsiScriptLoaded] = useState(false);
+
+    // Rehydrate previously-synced calendar events from Firestore on load.
+    useEffect(() => {
+        if (!user) return undefined;
+        const unsubscribe = subscribeCalendarEvents(user.uid, ({ events, syncedAt }) => {
+            setSyncedEvents(events);
+            setLastSyncedAt(syncedAt);
+        });
+        return unsubscribe;
+    }, [user]);
+
+    // Ctrl/Cmd+K opens the command palette
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+                e.preventDefault();
+                setIsPaletteOpen((open) => !open);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -57,7 +95,7 @@ function HubApp({ user, handleSignOut }) {
         if (!user || !db) return undefined;
         const basePath = `artifacts/${appId}/users/${user.uid}`;
 
-        const projectsQuery = query(collection(db, `${basePath}/projects`));
+        const projectsQuery = query(collection(db, `${basePath}/projects`), limit(READ_LIMITS.projects));
         const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
             const projectsData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             setProjects(projectsData);
@@ -67,22 +105,22 @@ function HubApp({ user, handleSignOut }) {
             }
         });
 
-        const tasksQuery = query(collection(db, `${basePath}/tasks`));
+        const tasksQuery = query(collection(db, `${basePath}/tasks`), limit(READ_LIMITS.tasks));
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) =>
             setTasks(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
-        const habitsQuery = query(collection(db, `${basePath}/habits`));
+        const habitsQuery = query(collection(db, `${basePath}/habits`), limit(READ_LIMITS.habits));
         const unsubscribeHabits = onSnapshot(habitsQuery, (snapshot) =>
             setHabits(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
-        const goalsQuery = query(collection(db, `${basePath}/goals`));
+        const goalsQuery = query(collection(db, `${basePath}/goals`), limit(READ_LIMITS.goals));
         const unsubscribeGoals = onSnapshot(goalsQuery, (snapshot) =>
             setGoals(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
-        const habitEntriesQuery = query(collection(db, `${basePath}/habit_entries`));
+        const habitEntriesQuery = query(collection(db, `${basePath}/habit_entries`), limit(READ_LIMITS.habitEntries));
         const unsubscribeHabitEntries = onSnapshot(habitEntriesQuery, (snapshot) =>
             setHabitEntries(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
@@ -114,12 +152,23 @@ function HubApp({ user, handleSignOut }) {
                 <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
                     <Book size={20} /> ProdHub
                 </h1>
-                <button 
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-                    className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
-                >
-                    <Menu size={24} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsPaletteOpen(true)}
+                        aria-label="Search"
+                        className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
+                    >
+                        <Search size={22} />
+                    </button>
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+                        aria-expanded={isSidebarOpen}
+                        className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
+                    >
+                        <Menu size={24} />
+                    </button>
+                </div>
             </div>
 
             {/* Sidebar Container */}
@@ -155,6 +204,7 @@ function HubApp({ user, handleSignOut }) {
                             syncedEvents={syncedEvents}
                             setSyncedEvents={setSyncedEvents}
                             tokenClient={tokenClient}
+                            lastSyncedAt={lastSyncedAt}
                         />
                     )}
                     {activeView === 'habit_tracker' && <HabitTrackerView habits={habits} entries={habitEntries} />}
@@ -168,6 +218,15 @@ function HubApp({ user, handleSignOut }) {
                     <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms of Service</a>
                 </footer>
             </main>
+            <PomodoroTimer />
+            <CommandPalette
+                isOpen={isPaletteOpen}
+                onClose={() => setIsPaletteOpen(false)}
+                projects={projects}
+                tasks={tasks}
+                onNavigate={handleSetView}
+                defaultProjectId={selectedProjectId}
+            />
         </div>
     );
 }

@@ -1,22 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { doc, updateDoc, addDoc, collection, deleteDoc } from 'firebase/firestore';
-import { Edit2, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
+import { Calendar, Edit2, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
-import { appId, GEMINI_API_KEY } from '../../config/env';
+import { appId, isGeminiConfigured } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
+import { formatDate, RECURRENCE_OPTIONS } from '../../utils/datetime';
 import TaskItem from '../../components/shared/TaskItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import AiContextModal from '../../components/modals/AiContextModal';
+import ProjectNotes from './ProjectNotes';
+import SortableTaskList from './SortableTaskList';
 
 export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', dueDate: '', priority: 'Medium' });
+  const [newTask, setNewTask] = useState({ title: '', dueDate: '', priority: 'Medium', recurrence: 'none' });
   const [sortMode, setSortMode] = useState('deadline');
   const [editingProject, setEditingProject] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [geminiError, setGeminiError] = useState('');
   const [showAiContextModal, setShowAiContextModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('tasks');
 
   const userId = auth?.currentUser?.uid;
   const tasks = useMemo(() => {
@@ -67,6 +71,18 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     return sorted;
   }, [allTasks, project.id, sortMode]);
 
+  // For manual (drag) mode: incomplete tasks ordered by persisted `order`
+  // (draggable), and completed tasks shown below.
+  const { manualIncomplete, manualCompleted } = useMemo(() => {
+    const projectTasks = allTasks.filter((t) => t.projectId === project.id);
+    const byOrder = (a, b) =>
+      (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY);
+    return {
+      manualIncomplete: projectTasks.filter((t) => !t.completed).sort(byOrder),
+      manualCompleted: projectTasks.filter((t) => t.completed).sort(byOrder),
+    };
+  }, [allTasks, project.id]);
+
   useEffect(() => {
     if (!userId || !project || !db) return;
     const completedTasks = tasks.filter((t) => t.completed).length;
@@ -83,7 +99,7 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     if (!newTask.title.trim() || !userId || !db) return;
     const task = { ...newTask, projectId: project.id, completed: false, createdAt: new Date() };
     await addDoc(collection(db, `artifacts/${appId}/users/${userId}/tasks`), task);
-    setNewTask({ title: '', dueDate: '', priority: 'Medium' });
+    setNewTask({ title: '', dueDate: '', priority: 'Medium', recurrence: 'none' });
     setIsAddingTask(false);
   };
 
@@ -93,6 +109,7 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id), {
       name: editingProject.name,
       type: editingProject.type,
+      deadline: editingProject.deadline || null,
     });
     setEditingProject(null);
   };
@@ -100,17 +117,18 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const handleDeleteProject = async () => {
     if (!userId || !db) return;
     setShowDeleteModal(null);
+    const batch = writeBatch(db);
     for (const task of tasks) {
-      await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
+      batch.delete(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
     }
-    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id));
+    batch.delete(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id));
+    await batch.commit();
   };
 
   const handleGenerateTasks = async (customContext) => {
     setShowAiContextModal(false);
-    const apiKey = GEMINI_API_KEY;
-    if (!apiKey) {
-      setGeminiError('Gemini API key is not configured. Please add REACT_APP_GEMINI_API_KEY to your .env.local file.');
+    if (!isGeminiConfigured) {
+      setGeminiError('AI is not configured. Set REACT_APP_GEMINI_PROXY_URL (production) or REACT_APP_GEMINI_API_KEY (local dev).');
       return;
     }
     if (!userId || !db) return;
@@ -167,7 +185,7 @@ Based on the user's main instruction and the background context, generate a list
       },
     };
     try {
-      const result = await callGeminiWithRetry(payload, apiKey);
+      const result = await callGeminiWithRetry(payload);
       if (result.candidates && result.candidates[0].content.parts[0].text) {
         const generated = JSON.parse(result.candidates[0].content.parts[0].text);
         if (generated.tasks && generated.tasks.length > 0) {
@@ -226,26 +244,38 @@ Based on the user's main instruction and the background context, generate a list
             <option>Bootcamp</option>
             <option>Personal</option>
           </select>
-          <button type="submit" className="p-2 bg-green-600 hover:bg-green-700 rounded-md">
+          <input
+            type="date"
+            value={editingProject.deadline || ''}
+            onChange={(e) => setEditingProject({ ...editingProject, deadline: e.target.value })}
+            title="Project deadline (optional)"
+            className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+          />
+          <button type="submit" aria-label="Save project" className="p-2 bg-green-600 hover:bg-green-700 rounded-md">
             <Save size={20} />
           </button>
-          <button onClick={() => setEditingProject(null)} className="p-2 bg-gray-600 hover:bg-gray-700 rounded-md">
+          <button onClick={() => setEditingProject(null)} aria-label="Cancel editing" className="p-2 bg-gray-600 hover:bg-gray-700 rounded-md">
             <X size={20} />
           </button>
         </form>
       ) : (
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <h1 className="text-4xl font-bold text-white">{project.name}</h1>
             <span className="text-sm font-medium bg-blue-900/70 text-blue-300 px-3 py-1 rounded-full">
               {project.type}
             </span>
+            {project.deadline && (
+              <span className="flex items-center gap-1 text-sm font-medium bg-purple-900/60 text-purple-300 px-3 py-1 rounded-full">
+                <Calendar size={14} /> Due {formatDate(new Date(project.deadline))}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setEditingProject({ ...project })} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
+            <button onClick={() => setEditingProject({ ...project })} aria-label="Edit project" className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
               <Edit2 size={20} />
             </button>
-            <button onClick={() => setShowDeleteModal('project')} className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded-md">
+            <button onClick={() => setShowDeleteModal('project')} aria-label="Delete project" className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded-md">
               <Trash2 size={20} />
             </button>
           </div>
@@ -260,6 +290,33 @@ Based on the user's main instruction and the background context, generate a list
           <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${project.progress || 0}%` }}></div>
         </div>
       </div>
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-700/60">
+        {[
+          { id: 'tasks', label: 'To-Do List' },
+          { id: 'notes', label: 'Notes & Resources' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+              activeTab === tab.id
+                ? 'border-blue-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'notes' && (
+        <div className="bg-gray-800/60 rounded-lg p-6">
+          <ProjectNotes project={project} />
+        </div>
+      )}
+
+      {activeTab === 'tasks' && (
       <div className="bg-gray-800/60 rounded-lg p-6">
         <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold">To-Do List</h2>
@@ -273,6 +330,7 @@ Based on the user's main instruction and the background context, generate a list
               <option value="deadline">Deadline: Earliest First</option>
               <option value="priority-low-high">Priority: Low → High</option>
               <option value="priority-high-low">Priority: High → Low</option>
+              <option value="manual">Manual (drag to reorder)</option>
               <option value="random">Random</option>
             </select>
             <button
@@ -319,19 +377,37 @@ Based on the user's main instruction and the background context, generate a list
                 <option>Low</option>
               </select>
             </div>
+            <div className="md:col-span-3 flex items-center gap-2">
+              <Repeat size={16} className="text-gray-400 flex-shrink-0" />
+              <select
+                value={newTask.recurrence}
+                onChange={(e) => setNewTask({ ...newTask, recurrence: e.target.value })}
+                title="Repeat"
+                className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {RECURRENCE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
             <button type="submit" className="md:col-span-3 w-full bg-green-600 hover:bg-green-700 rounded-md py-2 font-semibold">
               Save Task
             </button>
           </form>
         )}
-        <div className="space-y-3">
-          {tasks.length > 0 ? (
-            tasks.map((task) => <TaskItem key={task.id} task={task} />)
-          ) : (
-            <p className="text-gray-400 text-center py-4">No tasks for this project yet. Try generating some with AI!</p>
-          )}
-        </div>
+        {sortMode === 'manual' ? (
+          <SortableTaskList tasks={manualIncomplete} completedTasks={manualCompleted} />
+        ) : (
+          <div className="space-y-3">
+            {tasks.length > 0 ? (
+              tasks.map((task) => <TaskItem key={task.id} task={task} />)
+            ) : (
+              <p className="text-gray-400 text-center py-4">No tasks for this project yet. Try generating some with AI!</p>
+            )}
+          </div>
+        )}
       </div>
+      )}
     </div>
   );
 }

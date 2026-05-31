@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, TrendingUp, Edit2, Trash2, Flame } from 'lucide-react';
-import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import { appId } from '../../config/env';
 import { getLocalDateKey } from '../../utils/datetime';
 import ConfirmModal from '../../components/modals/ConfirmModal';
+import useHabit from './useHabit';
 
 export default function HabitTrackerView({ habits, entries }) {
   const [newHabitName, setNewHabitName] = useState('');
@@ -162,52 +163,12 @@ export default function HabitTrackerView({ habits, entries }) {
 
 /* ── Compact row card: mobile / extension panel ── */
 function HabitRowCard({ habit, entries, streak }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(habit.name);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const userId = auth?.currentUser?.uid;
-  const todayKey = getLocalDateKey(new Date());
-  const entry = entries.find((e) => e.date === todayKey);
-  const isCompleted = entry ? entry.completed : false;
-
-  const handleHabitToggle = async () => {
-    if (!userId || !db) return;
-    if (entry) {
-      await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habit_entries`, entry.id), { completed: !isCompleted });
-    } else {
-      await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), {
-        habitId: habit.id,
-        date: todayKey,
-        completed: true,
-      });
-    }
-  };
-
-  const handleUpdateHabit = async (e) => {
-    e.preventDefault();
-    if (!editedName.trim() || !userId || !db) return;
-    try {
-      await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id), { name: editedName });
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating habit:', error);
-    }
-  };
-
-  const handleDeleteHabit = async () => {
-    if (!userId || !db) return;
-    setShowDeleteModal(false);
-    const q = query(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), where('habitId', '==', habit.id));
-    try {
-      const snapshot = await getDocs(q);
-      const batch = writeBatch(db);
-      snapshot.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-      await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id));
-    } catch (error) {
-      console.error('Error deleting habit:', error);
-    }
-  };
+  const {
+    isEditing, setIsEditing,
+    editedName, setEditedName,
+    showDeleteModal, setShowDeleteModal,
+    isCompleted, handleHabitToggle, handleUpdateHabit, handleDeleteHabit,
+  } = useHabit(habit, entries);
 
   return (
     <>
@@ -235,6 +196,7 @@ function HabitRowCard({ habit, entries, streak }) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleHabitToggle}
+              aria-label={isCompleted ? `Mark ${habit.name} not done` : `Mark ${habit.name} done`}
               className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-lg font-bold transition-all duration-200 ${isCompleted ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/40' : 'bg-gray-700/80 text-gray-500 hover:bg-gray-600/80 hover:text-white'}`}
             >
               {isCompleted ? '✓' : '○'}
@@ -247,8 +209,8 @@ function HabitRowCard({ habit, entries, streak }) {
               </div>
             </div>
             <div className="flex items-center gap-0.5 flex-shrink-0">
-              <button onClick={() => setIsEditing(true)} className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"><Edit2 size={13} /></button>
-              <button onClick={() => setShowDeleteModal(true)} className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors"><Trash2 size={13} /></button>
+              <button onClick={() => setIsEditing(true)} aria-label={`Edit ${habit.name}`} className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"><Edit2 size={13} /></button>
+              <button onClick={() => setShowDeleteModal(true)} aria-label={`Delete ${habit.name}`} className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors"><Trash2 size={13} /></button>
             </div>
           </div>
         )}
@@ -259,52 +221,12 @@ function HabitRowCard({ habit, entries, streak }) {
 
 /* ── Original tall card: desktop only ── */
 function HabitDayCard({ habit, entries, streak }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(habit.name);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const userId = auth?.currentUser?.uid;
-  const todayKey = getLocalDateKey(new Date());
-  const entry = entries.find((e) => e.date === todayKey);
-  const isCompleted = entry ? entry.completed : false;
-
-  const handleHabitToggle = async () => {
-    if (!userId || !db) return;
-    if (entry) {
-      await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habit_entries`, entry.id), { completed: !isCompleted });
-    } else {
-      await addDoc(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), {
-        habitId: habit.id,
-        date: todayKey,
-        completed: true,
-      });
-    }
-  };
-
-  const handleUpdateHabit = async (e) => {
-    e.preventDefault();
-    if (!editedName.trim() || !userId || !db) return;
-    try {
-      await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id), { name: editedName });
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating habit:', error);
-    }
-  };
-
-  const handleDeleteHabit = async () => {
-    if (!userId || !db) return;
-    setShowDeleteModal(false);
-    const q = query(collection(db, `artifacts/${appId}/users/${userId}/habit_entries`), where('habitId', '==', habit.id));
-    try {
-      const snapshot = await getDocs(q);
-      const batch = writeBatch(db);
-      snapshot.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-      await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/habits`, habit.id));
-    } catch (error) {
-      console.error('Error deleting habit:', error);
-    }
-  };
+  const {
+    isEditing, setIsEditing,
+    editedName, setEditedName,
+    showDeleteModal, setShowDeleteModal,
+    isCompleted, handleHabitToggle, handleUpdateHabit, handleDeleteHabit,
+  } = useHabit(habit, entries);
 
   return (
     <>
@@ -335,8 +257,8 @@ function HabitDayCard({ habit, entries, streak }) {
             <div className="flex justify-between items-start">
               <span className="font-semibold text-white pr-2">{habit.name}</span>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => setIsEditing(true)} className="p-1 text-gray-400 hover:text-white rounded-md hover:bg-gray-700"><Edit2 size={16} /></button>
-                <button onClick={() => setShowDeleteModal(true)} className="p-1 text-gray-400 hover:text-red-400 rounded-md hover:bg-gray-700"><Trash2 size={16} /></button>
+                <button onClick={() => setIsEditing(true)} aria-label={`Edit ${habit.name}`} className="p-1 text-gray-400 hover:text-white rounded-md hover:bg-gray-700"><Edit2 size={16} /></button>
+                <button onClick={() => setShowDeleteModal(true)} aria-label={`Delete ${habit.name}`} className="p-1 text-gray-400 hover:text-red-400 rounded-md hover:bg-gray-700"><Trash2 size={16} /></button>
               </div>
             </div>
             <div className={`flex items-center gap-1 text-sm mt-2 ${streak > 0 ? 'text-orange-400' : 'text-gray-500'}`}>
