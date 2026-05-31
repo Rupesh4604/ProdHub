@@ -71,12 +71,19 @@ function json(body, status, origin) {
 
 export default {
   async fetch(request, env) {
-    const allowedOrigin = env.ALLOWED_ORIGIN || '*';
+    // ALLOWED_ORIGIN may be a single origin or a comma-separated list
+    // (e.g. prod URL + http://localhost:3000 for dev). '*' allows any.
+    const allowedOrigins = (env.ALLOWED_ORIGIN || '*')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const requestOrigin = request.headers.get('Origin') || '';
+    const allowAll = allowedOrigins.includes('*');
+    const isAllowed = allowAll || allowedOrigins.includes(requestOrigin);
 
-    // Lock CORS to the configured origin (allow '*' only if explicitly set).
-    const origin =
-      allowedOrigin === '*' || requestOrigin === allowedOrigin ? requestOrigin || allowedOrigin : allowedOrigin;
+    // Echo back the caller's origin when allowed, else fall back to the first
+    // configured origin (so error responses still carry valid CORS headers).
+    const origin = allowAll ? requestOrigin || '*' : isAllowed ? requestOrigin : allowedOrigins[0] || '*';
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
@@ -86,7 +93,7 @@ export default {
       return json({ error: { message: 'Method not allowed' } }, 405, origin);
     }
 
-    if (allowedOrigin !== '*' && requestOrigin && requestOrigin !== allowedOrigin) {
+    if (!allowAll && requestOrigin && !isAllowed) {
       return json({ error: { message: 'Origin not allowed' } }, 403, origin);
     }
 
