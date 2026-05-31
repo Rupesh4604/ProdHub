@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { formatTime } from '../../utils/datetime';
 import { fetchCalendarEvents } from '../../services/googleCalendar';
+import { saveCalendarEvents } from '../../services/calendarStore';
+import { auth } from '../../config/firebase';
 import { RefreshCw, CalendarDays } from 'lucide-react';
 
-export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenClient }) {
+export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenClient, lastSyncedAt }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -16,6 +18,10 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
           try {
             const formattedEvents = await fetchCalendarEvents(tokenResponse.access_token);
             setSyncedEvents(formattedEvents);
+            // Persist so events survive refresh (avoids re-consent each session).
+            saveCalendarEvents(auth?.currentUser?.uid, formattedEvents).catch((e) =>
+              console.error('Could not persist calendar events:', e)
+            );
           } catch (e) {
             setError('Could not fetch events. Please try again.');
             console.error(e);
@@ -82,6 +88,12 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
           {isLoading ? 'Syncing…' : syncedEvents.length > 0 ? 'Refresh' : 'Sync Calendar'}
         </button>
       </div>
+
+      {lastSyncedAt && (
+        <p className="text-xs text-gray-500 -mt-2">
+          Calendar last synced {lastSyncedAt.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+        </p>
+      )}
 
       {error && (
         <div className="text-red-300 bg-red-950/60 border border-red-700/50 p-3 rounded-2xl text-xs">{error}</div>

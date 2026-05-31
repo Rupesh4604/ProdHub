@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { appId, GOOGLE_CLIENT_ID, isFirebaseConfigured } from './config/env';
 import { db } from './config/firebase';
 import { createCalendarTokenClient, loadGoogleIdentityScript } from './services/googleCalendar';
+import { subscribeCalendarEvents } from './services/calendarStore';
 import LoginScreen from './components/auth/LoginScreen';
 import ConfigurationNeeded from './components/layout/ConfigurationNeeded';
 import Sidebar from './features/sidebar/Sidebar';
@@ -30,8 +31,19 @@ function HubApp({ user, handleSignOut }) {
     const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
     const [syncedEvents, setSyncedEvents] = useState([]);
+    const [lastSyncedAt, setLastSyncedAt] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
     const [isGsiScriptLoaded, setIsGsiScriptLoaded] = useState(false);
+
+    // Rehydrate previously-synced calendar events from Firestore on load.
+    useEffect(() => {
+        if (!user) return undefined;
+        const unsubscribe = subscribeCalendarEvents(user.uid, ({ events, syncedAt }) => {
+            setSyncedEvents(events);
+            setLastSyncedAt(syncedAt);
+        });
+        return unsubscribe;
+    }, [user]);
 
     // Ctrl/Cmd+K opens the command palette
     useEffect(() => {
@@ -181,6 +193,7 @@ function HubApp({ user, handleSignOut }) {
                             syncedEvents={syncedEvents}
                             setSyncedEvents={setSyncedEvents}
                             tokenClient={tokenClient}
+                            lastSyncedAt={lastSyncedAt}
                         />
                     )}
                     {activeView === 'habit_tracker' && <HabitTrackerView habits={habits} entries={habitEntries} />}
