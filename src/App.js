@@ -15,7 +15,8 @@ import HabitTrackerView from './features/habits/HabitTrackerView';
 import WeeklyReviewView from './features/review/WeeklyReviewView';
 import LandingPage from './components/layout/LandingPage';
 import PomodoroTimer from './features/pomodoro/PomodoroTimer';
-import { Menu, Book } from 'lucide-react';
+import CommandPalette from './features/search/CommandPalette';
+import { Menu, Book, Search } from 'lucide-react';
 
 function HubApp({ user, handleSignOut }) {
     const [projects, setProjects] = useState([]);
@@ -26,10 +27,23 @@ function HubApp({ user, handleSignOut }) {
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
     const [syncedEvents, setSyncedEvents] = useState([]);
     const [tokenClient, setTokenClient] = useState(null);
     const [isGsiScriptLoaded, setIsGsiScriptLoaded] = useState(false);
+
+    // Ctrl/Cmd+K opens the command palette
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+                e.preventDefault();
+                setIsPaletteOpen((open) => !open);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -115,14 +129,23 @@ function HubApp({ user, handleSignOut }) {
                 <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
                     <Book size={20} /> ProdHub
                 </h1>
-                <button
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
-                    aria-expanded={isSidebarOpen}
-                    className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
-                >
-                    <Menu size={24} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsPaletteOpen(true)}
+                        aria-label="Search"
+                        className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
+                    >
+                        <Search size={22} />
+                    </button>
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+                        aria-expanded={isSidebarOpen}
+                        className="text-gray-300 hover:text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
+                    >
+                        <Menu size={24} />
+                    </button>
+                </div>
             </div>
 
             {/* Sidebar Container */}
@@ -172,6 +195,14 @@ function HubApp({ user, handleSignOut }) {
                 </footer>
             </main>
             <PomodoroTimer />
+            <CommandPalette
+                isOpen={isPaletteOpen}
+                onClose={() => setIsPaletteOpen(false)}
+                projects={projects}
+                tasks={tasks}
+                onNavigate={handleSetView}
+                defaultProjectId={selectedProjectId}
+            />
         </div>
     );
 }
