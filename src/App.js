@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, limit, onSnapshot, query } from 'firebase/firestore';
 import { useAuth } from './contexts/AuthContext';
 import { appId, GOOGLE_CLIENT_ID, isFirebaseConfigured } from './config/env';
 import { db } from './config/firebase';
@@ -18,6 +18,17 @@ import LandingPage from './components/layout/LandingPage';
 import PomodoroTimer from './features/pomodoro/PomodoroTimer';
 import CommandPalette from './features/search/CommandPalette';
 import { Menu, Book, Search } from 'lucide-react';
+
+// Safety caps on per-user reads. Generous for a personal productivity app, but
+// they bound worst-case Firestore reads instead of subscribing to whole
+// collections unbounded. (Bare limits don't drop docs missing a field.)
+const READ_LIMITS = {
+    projects: 500,
+    tasks: 2000,
+    habits: 200,
+    goals: 200,
+    habitEntries: 5000,
+};
 
 function HubApp({ user, handleSignOut }) {
     const [projects, setProjects] = useState([]);
@@ -84,7 +95,7 @@ function HubApp({ user, handleSignOut }) {
         if (!user || !db) return undefined;
         const basePath = `artifacts/${appId}/users/${user.uid}`;
 
-        const projectsQuery = query(collection(db, `${basePath}/projects`));
+        const projectsQuery = query(collection(db, `${basePath}/projects`), limit(READ_LIMITS.projects));
         const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
             const projectsData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             setProjects(projectsData);
@@ -94,22 +105,22 @@ function HubApp({ user, handleSignOut }) {
             }
         });
 
-        const tasksQuery = query(collection(db, `${basePath}/tasks`));
+        const tasksQuery = query(collection(db, `${basePath}/tasks`), limit(READ_LIMITS.tasks));
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) =>
             setTasks(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
-        const habitsQuery = query(collection(db, `${basePath}/habits`));
+        const habitsQuery = query(collection(db, `${basePath}/habits`), limit(READ_LIMITS.habits));
         const unsubscribeHabits = onSnapshot(habitsQuery, (snapshot) =>
             setHabits(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
-        const goalsQuery = query(collection(db, `${basePath}/goals`));
+        const goalsQuery = query(collection(db, `${basePath}/goals`), limit(READ_LIMITS.goals));
         const unsubscribeGoals = onSnapshot(goalsQuery, (snapshot) =>
             setGoals(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
-        const habitEntriesQuery = query(collection(db, `${basePath}/habit_entries`));
+        const habitEntriesQuery = query(collection(db, `${basePath}/habit_entries`), limit(READ_LIMITS.habitEntries));
         const unsubscribeHabitEntries = onSnapshot(habitEntriesQuery, (snapshot) =>
             setHabitEntries(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
         );

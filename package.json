@@ -24,6 +24,7 @@
     "build": "react-scripts build",
     "build:extension": "react-scripts build && node -e \"require('fs').copyFileSync('./build/manifest.extension.json', './build/manifest.json')\"",
     "test": "react-scripts test",
+    "test:ci": "react-scripts test --watchAll=false",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
