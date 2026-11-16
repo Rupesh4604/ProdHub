@@ -5,7 +5,7 @@ ProdHub is a modern, all-in-one web application built to help you organize, achi
 
 **Try ProdHub Now**  
 🌐 Web App: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)  
-🧩 Chrome Extension: [ProdHub on the Chrome Web Store](#) *(coming soon)*
+🧩 Chrome Extension: build it from source and load it unpacked — see [Installing the Extension](#installing-the-extension-development--unpacked) below.
 
 ![ProdHub](images/Intro_page.jpeg)
 
@@ -203,8 +203,8 @@ Follow these steps to run ProdHub locally and customize it for your workflow.
 #### 1. Clone the Repository
 
 ```sh
-git clone https://github.com/Rupesh4604/my-productivity-hub.git
-cd my-productivity-hub
+git clone https://github.com/Rupesh4604/ProdHub.git
+cd ProdHub
 ```
 
 #### 2. Install Dependencies
@@ -269,7 +269,7 @@ REACT_APP_GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 > the key in the client JS. In production set `REACT_APP_GEMINI_PROXY_URL` only
 > and route AI calls through the Cloudflare Worker in [`gemini-proxy/`](gemini-proxy/).
 
-Update `src/App.js` to use these variables for your `firebaseConfig`.
+These are read by `src/config/env.js`; no code changes are needed.
 
 #### 6. Run and Deploy
 
@@ -295,7 +295,7 @@ This project is fully containerized, allowing you to run it in a consistent and 
 1.  **Clone the Repository**
 
     ```bash
-    git clone https://github.com/Rupesh4604/my-productivity-hub.git
+    git clone https://github.com/Rupesh4604/ProdHub.git
     cd ProdHub
     ```
 
@@ -310,8 +310,11 @@ This project is fully containerized, allowing you to run it in a consistent and 
     REACT_APP_FIREBASE_MESSAGING_SENDER_ID=1234567890
     REACT_APP_FIREBASE_APP_ID=1:1234567890:web:abcdef123456
     REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-    REACT_APP_GEMINI_API_KEY=your-gemini-api-key
+    REACT_APP_GEMINI_PROXY_URL=https://prodhub-gemini-proxy.<subdomain>.workers.dev
     ```
+
+    Everything in this file is baked into the client bundle, so it must not contain
+    secrets. The Gemini API key lives only in the [`gemini-proxy/`](gemini-proxy/) Worker.
 
 3.  **Build and Run the Container**
 
