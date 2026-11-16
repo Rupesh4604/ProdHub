@@ -103,10 +103,17 @@ export default {
     if (!token) {
       return json({ error: { message: 'Missing Authorization bearer token' } }, 401, origin);
     }
+    let claims;
     try {
-      await verifyFirebaseToken(token, env.FIREBASE_PROJECT_ID);
+      claims = await verifyFirebaseToken(token, env.FIREBASE_PROJECT_ID);
     } catch (e) {
       return json({ error: { message: `Invalid token: ${e.message}` } }, 401, origin);
+    }
+
+    // Demo-mode (anonymous) users can mint valid tokens without an account, so
+    // they must not be able to spend Gemini quota.
+    if (claims.firebase?.sign_in_provider === 'anonymous') {
+      return json({ error: { message: 'AI features need a free account. Sign up to use them.' } }, 403, origin);
     }
 
     // --- Forward to Gemini ---

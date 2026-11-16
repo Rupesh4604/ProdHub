@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function LoginScreen({ onGoogleSignIn, onEmailSignIn, onEmailSignUp, onBack }) {
+export default function LoginScreen({ onGoogleSignIn, onEmailSignIn, onEmailSignUp, onStartDemo, onBack }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -192,6 +192,24 @@ export default function LoginScreen({ onGoogleSignIn, onEmailSignIn, onEmailSign
             {isSigningUp ? 'Sign In' : 'Sign Up'}
           </button>
         </p>
+        {onStartDemo && (
+          <p style={{ textAlign: 'center', fontSize: '0.83rem', color: '#64748b', marginTop: '0.5rem' }}>
+            Just looking?{' '}
+            <button
+              onClick={async () => {
+                setError('');
+                try {
+                  await onStartDemo();
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+              style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem' }}
+            >
+              Try the demo
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );

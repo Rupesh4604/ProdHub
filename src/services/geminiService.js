@@ -31,6 +31,11 @@ const buildRequest = async () => {
 };
 
 export const callGeminiWithRetry = async (payload, maxRetries = 6) => {
+    // Demo (anonymous) users get no AI: the proxy rejects them too, this just
+    // gives a clear message and covers the direct-key dev fallback.
+    if (auth?.currentUser?.isAnonymous) {
+        throw new Error('AI features need a free account. Save your demo with Google or sign up to use them.');
+    }
     let retries = 0;
     while (retries < maxRetries) {
         try {
@@ -48,6 +53,11 @@ export const callGeminiWithRetry = async (payload, maxRetries = 6) => {
             // 401 is the proxy's own auth failure (missing/invalid Firebase token).
             // Other statuses (403 origin, 500 misconfig, Gemini errors) fall through
             // so the real message from the response body is surfaced.
+            if (response.status === 403) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || 'Not allowed to use AI features.');
+            }
+
             if (response.status === 401) {
                 throw new Error('Your session has expired. Please sign in again to use AI features.');
             }
