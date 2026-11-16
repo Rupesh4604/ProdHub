@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp } from 'lucide-react';
+import { Archive, Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
@@ -9,7 +9,8 @@ import ConfirmModal from '../../components/modals/ConfirmModal';
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
 
-export default function Sidebar({ onViewChange, projects, goals, userId, handleSignOut, onOpenSearch }) {
+export default function Sidebar({ onViewChange, projects, archivedProjects = [], goals, userId, handleSignOut, onOpenSearch }) {
+  const [showArchived, setShowArchived] = useState(false);
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
@@ -150,7 +151,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                           : 'bg-yellow-400'
                       }`}
                     ></div>
-                    <span className="truncate">{p.name}</span>
+                    <span className="truncate" title={p.name}>{p.name}</span>
                   </button>
                 ))}
                 {standaloneProjects.length === 0 && (
@@ -208,6 +209,33 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                 </form>
               )}
             </div>
+
+            {archivedProjects.length > 0 && (
+              <div className="pt-4">
+                <button
+                  onClick={() => setShowArchived(!showArchived)}
+                  aria-expanded={showArchived}
+                  className="w-full flex items-center gap-2 px-3 mb-1 text-sm font-semibold text-gray-500 hover:text-gray-300"
+                >
+                  {showArchived ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  <Archive size={14} /> Archived ({archivedProjects.length})
+                </button>
+                {showArchived && (
+                  <div className="max-h-[25vh] overflow-y-auto space-y-0.5 pr-1">
+                    {archivedProjects.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleNavigate('project', p.id)}
+                        className="w-full text-left px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-700/50 hover:text-gray-300 transition-colors truncate"
+                        title={p.name}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
         </div>
         <button
@@ -307,7 +335,7 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
                     : 'bg-yellow-400'
                 }`}
               ></div>
-              {p.name}
+              <span className="truncate" title={p.name}>{p.name}</span>
             </button>
           ))}
           {projects.length === 0 && <p className="px-3 py-1.5 text-xs text-gray-500">No projects yet.</p>}

@@ -176,6 +176,18 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
         [selectedProjectId, projects]
     );
 
+    // Archived projects (and their tasks) drop out of every overview; they stay
+    // reachable from the sidebar's Archived section.
+    const { activeProjects, archivedProjects, activeTasks } = useMemo(() => {
+        const archived = projects.filter((p) => p.archived);
+        const archivedIds = new Set(archived.map((p) => p.id));
+        return {
+            activeProjects: projects.filter((p) => !p.archived),
+            archivedProjects: archived,
+            activeTasks: tasks.filter((t) => !archivedIds.has(t.projectId)),
+        };
+    }, [projects, tasks]);
+
     const handleSetView = (view, projectId = null) => {
         setActiveView(view);
         setSelectedProjectId(projectId);
@@ -212,7 +224,8 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
             <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block md:w-64 flex-shrink-0 h-[calc(100vh-73px)] md:h-screen w-full`}>
                 <Sidebar
                     onViewChange={handleSetView}
-                    projects={projects}
+                    projects={activeProjects}
+                    archivedProjects={archivedProjects}
                     goals={goals}
                     userId={user.uid}
                     handleSignOut={handleSignOut}
@@ -225,8 +238,8 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
                     {isDemo && <DemoBanner onSave={onSaveDemo} onExit={handleSignOut} />}
                     {activeView === 'dashboard' && (
                         <Dashboard
-                            projects={projects}
-                            tasks={tasks}
+                            projects={activeProjects}
+                            tasks={activeTasks}
                             goals={goals}
                             onViewChange={handleSetView}
                             syncedEvents={syncedEvents}
@@ -235,11 +248,11 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
                     {activeView === 'project' && selectedProject && (
                         <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />
                     )}
-                    {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
+                    {activeView === 'all_tasks' && <AllTasksView tasks={activeTasks} projects={activeProjects} />}
                     {activeView === 'schedule' && (
                         <ScheduleView
-                            projects={projects}
-                            tasks={tasks}
+                            projects={activeProjects}
+                            tasks={activeTasks}
                             syncedEvents={syncedEvents}
                             setSyncedEvents={setSyncedEvents}
                             tokenClient={isDemo ? null : tokenClient}
@@ -261,8 +274,8 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
             <CommandPalette
                 isOpen={isPaletteOpen}
                 onClose={() => setIsPaletteOpen(false)}
-                projects={projects}
-                tasks={tasks}
+                projects={activeProjects}
+                tasks={activeTasks}
                 onNavigate={handleSetView}
                 defaultProjectId={selectedProjectId}
             />
