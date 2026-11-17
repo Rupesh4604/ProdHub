@@ -82,8 +82,8 @@ export default function LandingPage({ onStartDemo }) {
           ProdHub
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <a href="https://my-productivity-hub-5a3ba.web.app/privacy.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Privacy</a>
-          <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Terms</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/privacy.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Privacy</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/terms.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Terms</a>
         </div>
       </nav>
 
@@ -293,8 +293,8 @@ export default function LandingPage({ onStartDemo }) {
       >
         <p style={{ marginBottom: '0.4rem' }}>&copy; 2026 ProdHub — Open-source productivity for everyone.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem' }}>
-          <a href="https://my-productivity-hub-5a3ba.web.app/privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</a>
-          <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</a>
           <a href="https://github.com/Rupesh4604/ProdHub" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>GitHub</a>
         </div>
       </footer>

@@ -4,7 +4,7 @@
 ProdHub is a modern, all-in-one web application built to help you organize, achieve, and grow. Seamlessly manage projects, tasks, habits, and your calendar from a single, intuitive platform—all with smart AI-powered features and robust security.
 
 **Try ProdHub Now**  
-🌐 Web App: [https://my-productivity-hub-5a3ba.web.app/](https://my-productivity-hub-5a3ba.web.app/)  
+🌐 Web App: [https://prodhub.rupeshmediboyina.dev](https://prodhub.rupeshmediboyina.dev)  
 🧩 Chrome Extension: build it from source and load it unpacked — see [Installing the Extension](#installing-the-extension-development--unpacked) below.
 
 ![ProdHub](images/Intro_page.jpeg)

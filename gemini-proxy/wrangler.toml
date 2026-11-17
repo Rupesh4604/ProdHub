@@ -9,5 +9,5 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 FIREBASE_PROJECT_ID = "my-productivity-hub-5a3ba"
 # Comma-separated list: production origin + localhost for dev.
-ALLOWED_ORIGIN = "https://my-productivity-hub-5a3ba.web.app,http://localhost:3000"
+ALLOWED_ORIGIN = "https://prodhub.rupeshmediboyina.dev,https://my-productivity-hub-5a3ba.web.app,http://localhost:3000"
 GEMINI_MODEL = "gemini-2.5-flash"

@@ -12,7 +12,7 @@ import { importX509, jwtVerify, decodeProtectedHeader } from 'jose';
  * Required bindings (see wrangler.toml / `wrangler secret`):
  *   - GEMINI_API_KEY       (secret) Google AI Studio / Generative Language key
  *   - FIREBASE_PROJECT_ID  (var)    your Firebase project id
- *   - ALLOWED_ORIGIN       (var)    e.g. https://my-productivity-hub-5a3ba.web.app
+ *   - ALLOWED_ORIGIN       (var)    e.g. https://prodhub.rupeshmediboyina.dev
  *   - GEMINI_MODEL         (var)    optional, defaults to gemini-2.5-flash
  */
 
