@@ -5,12 +5,14 @@ import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
 import GoalPlannerModal from '../../components/modals/GoalPlannerModal';
 import ConfirmModal from '../../components/modals/ConfirmModal';
+import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
 
-export default function Sidebar({ onViewChange, projects, archivedProjects = [], goals, userId, handleSignOut, onOpenSearch }) {
+export default function Sidebar({ onViewChange, projects, archivedProjects = [], goals, userId, isDemo = false, handleSignOut, onOpenSearch }) {
   const [showArchived, setShowArchived] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
@@ -244,6 +246,15 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
         >
           <LogOut size={20} /> Sign Out
         </button>
+        {!isDemo && (
+          <button
+            onClick={() => setShowDeleteAccount(true)}
+            className="w-full flex-shrink-0 text-left px-3 py-1 text-xs text-gray-600 hover:text-red-400 transition-colors"
+          >
+            Delete account
+          </button>
+        )}
+        <DeleteAccountModal isOpen={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       </aside>
     </>
   );

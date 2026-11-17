@@ -175,7 +175,7 @@
         Legal
       </div>
       <h1>Privacy Policy</h1>
-      <p class="subtitle">Last updated: April 20, 2026</p>
+      <p class="subtitle">Last updated: November 17, 2026</p>
     </div>
 
     <div class="container">
@@ -195,9 +195,10 @@
         </div>
         <p>We collect only what is necessary to provide the service:</p>
         <ul>
-          <li><strong>Account data</strong> – Your Google account name, email address, and profile picture, used for authentication via Firebase Authentication.</li>
-          <li><strong>App data</strong> – Tasks, habits, notes, goals, and related entries stored in Cloud Firestore under your unique user ID.</li>
-          <li><strong>Google Calendar data</strong> – If you sync your calendar, we request read-only access to display events. We never store calendar data on our servers.</li>
+          <li><strong>Account data</strong> – If you sign in with Google: your name, email address, and profile picture. If you sign up with email: your email address. Used only for authentication via Firebase Authentication.</li>
+          <li><strong>App data</strong> – Tasks, projects, notes, goals, habits, and habit history you create, stored in Cloud Firestore under your unique user ID.</li>
+          <li><strong>Google Calendar data (optional)</strong> – Only if you click "Sync Google Calendar". See <a href="#google-user-data">Google user data</a> below for exactly what we access, store, and why.</li>
+          <li><strong>Demo sessions</strong> – "Try the demo" creates an anonymous account with sample data. It contains no personal information.</li>
         </ul>
       </div>
 
@@ -209,7 +210,8 @@
         <ul>
           <li>To authenticate you and display your personal data.</li>
           <li>To sync your productivity data across devices.</li>
-          <li>To display your Google Calendar events within the schedule view.</li>
+          <li>To show your upcoming Google Calendar events next to your task deadlines in the Schedule and Dashboard views.</li>
+          <li>To power optional AI features (task suggestions, goal planning, "Plan My Day") when you click them.</li>
         </ul>
       </div>
 
@@ -232,17 +234,32 @@
           <li>Cloud Firestore – data storage</li>
           <li>Firebase Hosting – app delivery</li>
           <li>Google Calendar API – read-only event display (optional)</li>
+          <li>Google Gemini API – AI features, only when you click an AI button. Requests are relayed through our Cloudflare Worker, which checks you are signed in and does not log request contents.</li>
         </ul>
+      </div>
+
+      <div class="section" id="google-user-data">
+        <div class="section-header">
+          <div class="section-icon">📅</div>
+          <h2>6. Google User Data (Google Calendar)</h2>
+        </div>
+        <p><strong>What we access.</strong> When you click "Sync Google Calendar", ProdHub asks for the read-only scope <code>https://www.googleapis.com/auth/calendar.events.readonly</code>. We read the <strong>title and start time</strong> of upcoming events on your primary calendar. We do not read attendees, descriptions, locations, or attachments, and we never create, edit, or delete calendar events.</p>
+        <p><strong>How we use it.</strong> Solely to display your events next to your task deadlines in the Schedule and Dashboard views. If you click "Plan My Day", the titles and start times of <em>today's</em> events (no attendees, descriptions or locations) are sent once to the Google Gemini API to generate your plan; the result is shown to you and not stored by ProdHub.</p>
+        <p><strong>How we store it.</strong> The event titles and start times from your last sync are stored in your private Cloud Firestore record (readable only by your account) so they stay visible after a page refresh. Each sync replaces the previous copy. They are deleted when you click Schedule → Disconnect or delete your account. We do not store your Google access token.</p>
+        <p><strong>Sharing.</strong> We do not sell Google user data, share it with third parties, use it for advertising, or allow humans to read it, except with your explicit consent, for security purposes, or to comply with law.</p>
+        <p><strong>AI/ML.</strong> Google user data is not used to develop, improve, or train generalized AI or machine-learning models.</p>
+        <p><strong>Limited Use.</strong> ProdHub's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
       </div>
 
       <div class="section">
         <div class="section-header">
           <div class="section-icon">✅</div>
-          <h2>6. Your Rights</h2>
+          <h2>7. Your Rights</h2>
         </div>
         <ul>
-          <li>Delete your account and all associated data at any time from within the app.</li>
-          <li>Revoke Google Calendar access at any time via your Google Account settings.</li>
+          <li>Delete your account and all associated data at any time: sidebar → <em>Delete account</em>. This immediately and permanently deletes your tasks, projects, notes, goals, habits, habit history, cached calendar events, and your login.</li>
+          <li>Remove cached Google Calendar events at any time: Schedule → <em>Disconnect</em>.</li>
+          <li>Revoke ProdHub's access to your Google account at any time via your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account permissions</a>.</li>
           <li>Request a copy of your data by contacting us via GitHub.</li>
         </ul>
       </div>
@@ -250,7 +267,7 @@
       <div class="section">
         <div class="section-header">
           <div class="section-icon">🧒</div>
-          <h2>7. Children's Privacy</h2>
+          <h2>8. Children's Privacy</h2>
         </div>
         <p>ProdHub is not directed at children under 13. We do not knowingly collect personal data from children.</p>
       </div>
@@ -258,7 +275,7 @@
       <div class="section">
         <div class="section-header">
           <div class="section-icon">📬</div>
-          <h2>8. Contact</h2>
+          <h2>9. Contact</h2>
         </div>
         <p>For privacy-related questions, please open an issue on our <a href="https://github.com/Rupesh4604/ProdHub" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
         <p><strong>Developer</strong>: M Rupesh Kumar Yadav</p>

@@ -227,6 +227,7 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
                     projects={activeProjects}
                     archivedProjects={archivedProjects}
                     goals={goals}
+                    isDemo={isDemo}
                     userId={user.uid}
                     handleSignOut={handleSignOut}
                     onOpenSearch={() => setIsPaletteOpen(true)}

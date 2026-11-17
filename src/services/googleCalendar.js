@@ -1,4 +1,5 @@
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+// Narrowest scope that lets us read event times (Google OAuth minimum-scope policy).
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
 
 export const loadGoogleIdentityScript = () =>
   new Promise((resolve, reject) => {

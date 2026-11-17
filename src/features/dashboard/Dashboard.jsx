@@ -76,6 +76,7 @@ export default function Dashboard({ projects, tasks, goals, onViewChange, synced
 
     if (todaysEvents.length > 0) {
       context +=
+        // Titles + start times only (disclosed in privacy policy, "Google user data").
         'Here are the fixed appointments from the calendar:\n' +
         todaysEvents.map((e) => `- ${e.title} at ${formatTime(e.date)}`).join('\n') +
         '\n\n';
