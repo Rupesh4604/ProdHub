@@ -279,6 +279,8 @@ These are read by `src/config/env.js`; no code changes are needed.
 | `npm run build` | Build production web app |
 | `npm run build:extension` | Build Chrome extension package in `build/` |
 | `firebase deploy` | Deploy web app to Firebase Hosting |
+| `firebase emulators:start --only auth,firestore` | Local Auth + Firestore emulators (uses `firestore.rules`) |
+| `REACT_APP_USE_EMULATORS=true npm start` | Run the app against the emulators instead of production |
 
 ---
 

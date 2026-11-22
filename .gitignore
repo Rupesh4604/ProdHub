@@ -28,3 +28,7 @@ yarn-error.log*
 # local tooling and build artifacts
 .claude/
 *.zip
+
+# local Firebase emulator output
+/build-emu
+*-debug.log
