@@ -144,15 +144,6 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
                     onClick={() => handleNavigate('project', p.id)}
                     className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
                   >
-                    <div
-                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        p.type === 'Course'
-                          ? 'bg-green-400'
-                          : p.type === 'Seminar'
-                          ? 'bg-purple-400'
-                          : 'bg-yellow-400'
-                      }`}
-                    ></div>
                     <span className="truncate" title={p.name}>{p.name}</span>
                   </button>
                 ))}
@@ -337,15 +328,6 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
               onClick={() => onViewChange('project', p.id)}
               className="w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
             >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  p.type === 'Course'
-                    ? 'bg-green-400'
-                    : p.type === 'Seminar'
-                    ? 'bg-purple-400'
-                    : 'bg-yellow-400'
-                }`}
-              ></div>
               <span className="truncate" title={p.name}>{p.name}</span>
             </button>
           ))}

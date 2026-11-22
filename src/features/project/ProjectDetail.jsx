@@ -367,7 +367,7 @@ Based on the user's main instruction and the background context, generate a list
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md font-semibold transition-colors disabled:bg-purple-800 disabled:cursor-not-allowed"
             >
               {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Sparkles size={18} />}
-              {isGenerating ? 'Generating...' : '✨ Generate Tasks'}
+              {isGenerating ? 'Generating...' : 'Generate Tasks'}
             </button>
             <button
               onClick={() => setIsAddingTask(!isAddingTask)}
