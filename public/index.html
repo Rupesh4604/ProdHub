@@ -8,13 +8,13 @@
     <meta name="google-site-verification" content="RiaPPGKXLWbj1Lved-L9aWfcbrsFukyfrlYgAEN33jI" />
     <meta
       name="description"
-      content="ProdHub – Your all-in-one productivity hub. Manage tasks, habits, goals, and projects in one beautiful place."
+      content="ProdHub is a personal productivity web app for managing tasks, projects, habits and goals in one dashboard, with optional read-only Google Calendar sync."
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-    <title>ProdHub - Productivity Hub</title>
+    <title>ProdHub – Personal Productivity Dashboard</title>
     <link rel="canonical" href="https://prodhub.rupeshmediboyina.dev/" />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,6 +35,8 @@
         gap: 1.5rem;
         z-index: 9999;
         transition: opacity 0.3s ease;
+        overflow-y: auto;
+        padding: 2rem 0;
       }
       #splash .brand {
         display: flex;
@@ -62,26 +64,39 @@
     </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>ProdHub requires JavaScript. Read about the app below, or see our <a href="/privacy.html" style="color:#60a5fa">Privacy Policy</a>.</noscript>
 
-    <!-- Branded splash shown while React boots; also serves as static content for non-JS crawlers -->
+    <!-- Static home-page content. Readable without JavaScript (search engines and
+         Google's OAuth branding review); React removes it once the app has loaded. -->
     <div id="splash">
       <div class="brand">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
         </svg>
-        ProdHub
+        <h1 style="font-size: 1.5rem; font-weight: 700; color: #60a5fa;">ProdHub</h1>
       </div>
-      
-      <h1 style="font-size: 1.25rem; color: #f1f5f9; text-align: center; margin-top: 0.5rem; font-weight: 700;">All-in-One Productivity Hub</h1>
-      
-      <p style="color: #94a3b8; text-align: center; max-width: 540px; line-height: 1.6; font-size: 0.95rem; margin-top: 0.5rem; padding: 0 1.5rem;">
-        <strong>The purpose of ProdHub</strong> is to provide a comprehensive productivity application that helps you organize tasks by project, build lasting habits with daily check-ins, set and track meaningful goals, and perform weekly reviews—all in one place.
+
+      <p style="color: #cbd5e1; text-align: center; max-width: 600px; line-height: 1.6; font-size: 1rem; padding: 0 1.5rem;">
+        ProdHub is a personal productivity web app. It brings your tasks, projects, goals, habits and weekly
+        reviews into one dashboard, so you can plan and track your work without switching between tools.
       </p>
 
-      <div class="spinner" style="margin-top: 1.5rem;"></div>
-      <p class="tagline" style="margin-top: 1rem;">Your app is loading…</p>
+      <ul style="color: #94a3b8; max-width: 600px; line-height: 1.7; font-size: 0.9rem; padding: 0 2.5rem; list-style: disc;">
+        <li>Organise tasks by project, with deadlines, priorities and recurring tasks.</li>
+        <li>Track daily habits and streaks, and set goals broken into projects.</li>
+        <li>Review your week with a summary of completed tasks and habit consistency.</li>
+        <li>Optional Google Calendar sync: with your permission, ProdHub reads the title and start time of your
+          upcoming events (read-only) and shows them next to your task deadlines. It never creates, edits or deletes events.</li>
+      </ul>
+
+      <p style="color: #64748b; font-size: 0.85rem; text-align: center;">
+        <a href="/privacy.html" style="color: #60a5fa;">Privacy Policy</a>
+        &nbsp;·&nbsp;
+        <a href="/terms.html" style="color: #60a5fa;">Terms of Service</a>
+      </p>
+
+      <div class="spinner" aria-hidden="true"></div>
     </div>
 
     <div id="root"></div>
