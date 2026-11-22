@@ -24,3 +24,7 @@ ISSUES.md
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# local tooling and build artifacts
+.claude/
+*.zip
