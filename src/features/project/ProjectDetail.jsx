@@ -356,8 +356,8 @@ Based on the user's main instruction and the background context, generate a list
               className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="deadline">Deadline: Earliest First</option>
-              <option value="priority-low-high">Priority: Low → High</option>
-              <option value="priority-high-low">Priority: High → Low</option>
+              <option value="priority-low-high">Priority: Low to High</option>
+              <option value="priority-high-low">Priority: High to Low</option>
               <option value="manual">Manual (drag to reorder)</option>
               <option value="random">Random</option>
             </select>
