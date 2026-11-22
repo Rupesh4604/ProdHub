@@ -33,7 +33,7 @@ export default function LandingPage({ onStartDemo }) {
     {
       icon: '📅',
       title: 'Schedule & Calendar',
-      desc: 'See all your tasks and events in one place. Optionally sync with Google Calendar.',
+      desc: 'See task deadlines and events in one view. Optional, read-only Google Calendar sync shows your upcoming events; ProdHub never changes your calendar.',
     },
     {
       icon: '📊',
