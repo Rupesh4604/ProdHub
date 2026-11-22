@@ -1,4 +1,5 @@
 import React from 'react';
+import SimpleMarkdown from '../shared/SimpleMarkdown';
 
 export default function DailyPlannerModal({ isOpen, onClose, plan, isLoading, error, retry }) {
   if (!isOpen) return null;
@@ -27,12 +28,7 @@ export default function DailyPlannerModal({ isOpen, onClose, plan, isLoading, er
               </button>
             </div>
           )}
-          {plan && (
-            <div
-              className="text-gray-300 whitespace-pre-wrap font-mono text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: plan.replace(/\n/g, '<br />') }}
-            ></div>
-          )}
+          {plan && <SimpleMarkdown text={plan} />}
         </div>
         <div className="flex justify-end mt-6">
           <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 font-semibold transition-colors">
