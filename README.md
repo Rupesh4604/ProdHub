@@ -55,6 +55,19 @@ ProdHub uses the Google Gemini API for smart, context-aware planning:
 
 ---
 
+## Screenshots
+
+| Dashboard | Projects & tasks | Habit tracker |
+|---|---|---|
+| ![Dashboard](images/dashboard.png) | ![All tasks](images/all_tasks.png) | ![Habit tracker](images/habit%20tracker.png) |
+| **Calendar scheduler** | **AI goal breakdown** | **Chrome side panel** |
+| ![Scheduler](images/sheduler.png) | ![AI features](images/ai%20.png) | ![Chrome extension](images/chrome_extension.png) |
+
+> The live app signs you in with Google so each person's data stays private. These screenshots show it without signing in.
+> Planned features are listed in [docs/ROADMAP.md](docs/ROADMAP.md).
+
+---
+
 ## 🧩 Chrome Extension
 
 ProdHub is also available as a **Chrome side panel extension**, so you can access your full productivity dashboard without leaving your current tab.
