@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { appId } from '../config/env';
 
@@ -40,4 +40,10 @@ export const subscribeCalendarEvents = (uid, cb) => {
       syncedAt: data.syncedAt?.toDate ? data.syncedAt.toDate() : null,
     });
   });
+};
+
+/** Remove every stored Google Calendar event for this user ("Disconnect"). */
+export const clearCalendarEvents = async (uid) => {
+  if (!uid || !db) return;
+  await deleteDoc(calendarDocRef(uid));
 };

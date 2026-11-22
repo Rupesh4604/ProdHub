@@ -1,15 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp } from 'lucide-react';
+import { Archive, Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
 import GoalPlannerModal from '../../components/modals/GoalPlannerModal';
 import ConfirmModal from '../../components/modals/ConfirmModal';
+import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
 
-export default function Sidebar({ onViewChange, projects, goals, userId, handleSignOut, onOpenSearch }) {
+export default function Sidebar({ onViewChange, projects, archivedProjects = [], goals, userId, isDemo = false, handleSignOut, onOpenSearch }) {
+  const [showArchived, setShowArchived] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
@@ -141,16 +144,7 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                     onClick={() => handleNavigate('project', p.id)}
                     className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
                   >
-                    <div
-                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        p.type === 'Course'
-                          ? 'bg-green-400'
-                          : p.type === 'Seminar'
-                          ? 'bg-purple-400'
-                          : 'bg-yellow-400'
-                      }`}
-                    ></div>
-                    <span className="truncate">{p.name}</span>
+                    <span className="truncate" title={p.name}>{p.name}</span>
                   </button>
                 ))}
                 {standaloneProjects.length === 0 && (
@@ -208,6 +202,33 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
                 </form>
               )}
             </div>
+
+            {archivedProjects.length > 0 && (
+              <div className="pt-4">
+                <button
+                  onClick={() => setShowArchived(!showArchived)}
+                  aria-expanded={showArchived}
+                  className="w-full flex items-center gap-2 px-3 mb-1 text-sm font-semibold text-gray-500 hover:text-gray-300"
+                >
+                  {showArchived ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  <Archive size={14} /> Archived ({archivedProjects.length})
+                </button>
+                {showArchived && (
+                  <div className="max-h-[25vh] overflow-y-auto space-y-0.5 pr-1">
+                    {archivedProjects.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleNavigate('project', p.id)}
+                        className="w-full text-left px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-700/50 hover:text-gray-300 transition-colors truncate"
+                        title={p.name}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
         </div>
         <button
@@ -216,6 +237,15 @@ export default function Sidebar({ onViewChange, projects, goals, userId, handleS
         >
           <LogOut size={20} /> Sign Out
         </button>
+        {!isDemo && (
+          <button
+            onClick={() => setShowDeleteAccount(true)}
+            className="w-full flex-shrink-0 text-left px-3 py-1 text-xs text-gray-600 hover:text-red-400 transition-colors"
+          >
+            Delete account
+          </button>
+        )}
+        <DeleteAccountModal isOpen={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       </aside>
     </>
   );
@@ -298,16 +328,7 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
               onClick={() => onViewChange('project', p.id)}
               className="w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
             >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  p.type === 'Course'
-                    ? 'bg-green-400'
-                    : p.type === 'Seminar'
-                    ? 'bg-purple-400'
-                    : 'bg-yellow-400'
-                }`}
-              ></div>
-              {p.name}
+              <span className="truncate" title={p.name}>{p.name}</span>
             </button>
           ))}
           {projects.length === 0 && <p className="px-3 py-1.5 text-xs text-gray-500">No projects yet.</p>}

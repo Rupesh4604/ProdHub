@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { formatTime } from '../../utils/datetime';
 import { fetchCalendarEvents } from '../../services/googleCalendar';
-import { saveCalendarEvents } from '../../services/calendarStore';
+import { clearCalendarEvents, saveCalendarEvents } from '../../services/calendarStore';
 import { auth } from '../../config/firebase';
-import { RefreshCw, CalendarDays } from 'lucide-react';
+import { RefreshCw, CalendarDays, Unlink } from 'lucide-react';
 
 export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedEvents, tokenClient, lastSyncedAt }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +33,18 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
       tokenClient.requestAccessToken();
     } else {
       setError('Google Auth is not ready. Please wait a moment and try again.');
+    }
+  };
+
+  // Delete every Google Calendar event ProdHub has cached for this user.
+  const handleDisconnect = async () => {
+    setError(null);
+    try {
+      await clearCalendarEvents(auth?.currentUser?.uid);
+      setSyncedEvents([]);
+    } catch (e) {
+      setError('Could not remove synced events. Please try again.');
+      console.error(e);
     }
   };
 
@@ -75,19 +87,36 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-white tracking-tight">Schedule</h1>
-        <button
-          onClick={handleSync}
-          disabled={isLoading || !tokenClient}
-          className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-lg shadow-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-        >
-          {isLoading ? (
-            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-          ) : (
-            <RefreshCw size={13} />
+        <div className="flex items-center gap-2">
+          {syncedEvents.length > 0 && (
+            <button
+              onClick={handleDisconnect}
+              disabled={isLoading}
+              title="Remove all Google Calendar events stored by ProdHub"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              <Unlink size={13} /> Disconnect
+            </button>
           )}
-          {isLoading ? 'Syncing…' : syncedEvents.length > 0 ? 'Refresh' : 'Sync Calendar'}
-        </button>
+          <button
+            onClick={handleSync}
+            disabled={isLoading || !tokenClient}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+            ) : (
+              <RefreshCw size={13} />
+            )}
+            {isLoading ? 'Syncing…' : syncedEvents.length > 0 ? 'Refresh' : 'Sync Google Calendar'}
+          </button>
+        </div>
       </div>
+
+      <p className="text-xs text-gray-500 -mt-2">
+        Read-only: ProdHub shows the title and start time of your upcoming Google Calendar events next to your task
+        deadlines. It never creates, edits or deletes calendar events.
+      </p>
 
       {lastSyncedAt && (
         <p className="text-xs text-gray-500 -mt-2">

@@ -30,7 +30,44 @@ const READ_LIMITS = {
     habitEntries: 5000,
 };
 
-function HubApp({ user, handleSignOut }) {
+function DemoBanner({ onSave, onExit }) {
+    const [error, setError] = useState('');
+    const [busy, setBusy] = useState(false);
+    const save = async () => {
+        setError('');
+        setBusy(true);
+        try {
+            await onSave();
+        } catch (err) {
+            if (err.code !== 'auth/popup-closed-by-user') setError(err.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+    return (
+        <div className="mb-4 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100 flex flex-col sm:flex-row sm:items-center gap-3">
+            <p className="flex-1">
+                <strong>You're exploring a demo workspace.</strong> Everything works except AI and Calendar sync.
+                Save it with Google to keep your changes.
+                {error && <span className="block text-red-300 mt-1">{error}</span>}
+            </p>
+            <div className="flex gap-2 flex-shrink-0">
+                <button
+                    onClick={save}
+                    disabled={busy}
+                    className="rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-60 px-3 py-1.5 font-semibold text-white"
+                >
+                    Save with Google
+                </button>
+                <button onClick={onExit} className="rounded-md px-3 py-1.5 text-blue-200 hover:bg-blue-500/20">
+                    Exit demo
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
     const [projects, setProjects] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [habits, setHabits] = useState([]);
@@ -139,6 +176,18 @@ function HubApp({ user, handleSignOut }) {
         [selectedProjectId, projects]
     );
 
+    // Archived projects (and their tasks) drop out of every overview; they stay
+    // reachable from the sidebar's Archived section.
+    const { activeProjects, archivedProjects, activeTasks } = useMemo(() => {
+        const archived = projects.filter((p) => p.archived);
+        const archivedIds = new Set(archived.map((p) => p.id));
+        return {
+            activeProjects: projects.filter((p) => !p.archived),
+            archivedProjects: archived,
+            activeTasks: tasks.filter((t) => !archivedIds.has(t.projectId)),
+        };
+    }, [projects, tasks]);
+
     const handleSetView = (view, projectId = null) => {
         setActiveView(view);
         setSelectedProjectId(projectId);
@@ -175,8 +224,10 @@ function HubApp({ user, handleSignOut }) {
             <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block md:w-64 flex-shrink-0 h-[calc(100vh-73px)] md:h-screen w-full`}>
                 <Sidebar
                     onViewChange={handleSetView}
-                    projects={projects}
+                    projects={activeProjects}
+                    archivedProjects={archivedProjects}
                     goals={goals}
+                    isDemo={isDemo}
                     userId={user.uid}
                     handleSignOut={handleSignOut}
                     onOpenSearch={() => setIsPaletteOpen(true)}
@@ -185,10 +236,11 @@ function HubApp({ user, handleSignOut }) {
             
             <main className={`${isSidebarOpen ? 'hidden md:block' : 'block'} flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen flex flex-col`}>
                 <div className="flex-1">
+                    {isDemo && <DemoBanner onSave={onSaveDemo} onExit={handleSignOut} />}
                     {activeView === 'dashboard' && (
                         <Dashboard
-                            projects={projects}
-                            tasks={tasks}
+                            projects={activeProjects}
+                            tasks={activeTasks}
                             goals={goals}
                             onViewChange={handleSetView}
                             syncedEvents={syncedEvents}
@@ -197,14 +249,14 @@ function HubApp({ user, handleSignOut }) {
                     {activeView === 'project' && selectedProject && (
                         <ProjectDetail project={selectedProject} allTasks={tasks} syncedEvents={syncedEvents} />
                     )}
-                    {activeView === 'all_tasks' && <AllTasksView tasks={tasks} projects={projects} />}
+                    {activeView === 'all_tasks' && <AllTasksView tasks={activeTasks} projects={activeProjects} />}
                     {activeView === 'schedule' && (
                         <ScheduleView
-                            projects={projects}
-                            tasks={tasks}
+                            projects={activeProjects}
+                            tasks={activeTasks}
                             syncedEvents={syncedEvents}
                             setSyncedEvents={setSyncedEvents}
-                            tokenClient={tokenClient}
+                            tokenClient={isDemo ? null : tokenClient}
                             lastSyncedAt={lastSyncedAt}
                         />
                     )}
@@ -214,17 +266,17 @@ function HubApp({ user, handleSignOut }) {
                     )}
                 </div>
                 <footer className="mt-8 pt-4 border-t border-gray-800 text-center text-xs text-gray-600 space-x-4">
-                    <a href="https://my-productivity-hub-5a3ba.web.app/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
+                    <a href="https://prodhub.rupeshmediboyina.dev/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
                     <span>·</span>
-                    <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms of Service</a>
+                    <a href="https://prodhub.rupeshmediboyina.dev/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms of Service</a>
                 </footer>
             </main>
             <PomodoroTimer />
             <CommandPalette
                 isOpen={isPaletteOpen}
                 onClose={() => setIsPaletteOpen(false)}
-                projects={projects}
-                tasks={tasks}
+                projects={activeProjects}
+                tasks={activeTasks}
                 onNavigate={handleSetView}
                 defaultProjectId={selectedProjectId}
             />
@@ -233,7 +285,7 @@ function HubApp({ user, handleSignOut }) {
 }
 
 export default function App() {
-    const { user, isAuthReady, signInWithGoogle, emailSignIn, emailSignUp, signOutUser } = useAuth();
+    const { user, isDemo, isAuthReady, signInWithGoogle, emailSignIn, emailSignUp, signOutUser, startDemo, saveDemoWithGoogle } = useAuth();
     const [hash, setHash] = useState(window.location.hash);
 
     useEffect(() => {
@@ -263,7 +315,7 @@ export default function App() {
         if (hash === '#login') {
             window.location.hash = ''; // Clear hash for cleanly showing the app
         }
-        return <HubApp user={user} handleSignOut={signOutUser} />;
+        return <HubApp user={user} isDemo={isDemo} handleSignOut={signOutUser} onSaveDemo={saveDemoWithGoogle} />;
     }
 
     // Unauthenticated User Routing
@@ -273,10 +325,11 @@ export default function App() {
                 onGoogleSignIn={signInWithGoogle}
                 onEmailSignIn={emailSignIn}
                 onEmailSignUp={emailSignUp}
+                onStartDemo={startDemo}
                 onBack={() => navigate('')}
             />
         );
     }
 
-    return <LandingPage />;
+    return <LandingPage onStartDemo={startDemo} />;
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
-import { Calendar, Edit2, GripVertical, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Calendar, Edit2, GripVertical, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
 import { appId, isGeminiConfigured } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
@@ -112,6 +112,16 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
       deadline: editingProject.deadline || null,
     });
     setEditingProject(null);
+  };
+
+  // Archiving hides the project (and its tasks) from the sidebar, dashboard,
+  // All Tasks and Schedule without deleting anything. Fully reversible.
+  const handleToggleArchive = async () => {
+    if (!userId || !db) return;
+    await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id), {
+      archived: !project.archived,
+      archivedAt: project.archived ? null : new Date(),
+    });
   };
 
   const handleDeleteProject = async () => {
@@ -259,6 +269,15 @@ Based on the user's main instruction and the background context, generate a list
           </button>
         </form>
       ) : (
+        <>
+        {project.archived && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+            <span>This project is archived. Its tasks are hidden from the dashboard, All Tasks and Schedule.</span>
+            <button onClick={handleToggleArchive} className="flex-shrink-0 rounded-md px-3 py-1 font-semibold hover:bg-amber-500/20">
+              Restore
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-wrap">
             <h1 className="text-4xl font-bold text-white">{project.name}</h1>
@@ -272,14 +291,23 @@ Based on the user's main instruction and the background context, generate a list
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setEditingProject({ ...project })} aria-label="Edit project" className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
+            <button onClick={() => setEditingProject({ ...project })} aria-label="Edit project" title="Edit project" className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
               <Edit2 size={20} />
             </button>
-            <button onClick={() => setShowDeleteModal('project')} aria-label="Delete project" className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded-md">
+            <button
+              onClick={handleToggleArchive}
+              aria-label={project.archived ? 'Restore project' : 'Archive project'}
+              title={project.archived ? 'Restore project' : 'Archive project'}
+              className="p-2 text-gray-400 hover:text-amber-300 hover:bg-gray-700 rounded-md"
+            >
+              {project.archived ? <ArchiveRestore size={20} /> : <Archive size={20} />}
+            </button>
+            <button onClick={() => setShowDeleteModal('project')} aria-label="Delete project" title="Delete project" className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-700 rounded-md">
               <Trash2 size={20} />
             </button>
           </div>
         </div>
+        </>
       )}
       <div>
         <div className="flex justify-between items-center mb-1">
@@ -328,8 +356,8 @@ Based on the user's main instruction and the background context, generate a list
               className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="deadline">Deadline: Earliest First</option>
-              <option value="priority-low-high">Priority: Low → High</option>
-              <option value="priority-high-low">Priority: High → Low</option>
+              <option value="priority-low-high">Priority: Low to High</option>
+              <option value="priority-high-low">Priority: High to Low</option>
               <option value="manual">Manual (drag to reorder)</option>
               <option value="random">Random</option>
             </select>
@@ -339,7 +367,7 @@ Based on the user's main instruction and the background context, generate a list
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md font-semibold transition-colors disabled:bg-purple-800 disabled:cursor-not-allowed"
             >
               {isGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <Sparkles size={18} />}
-              {isGenerating ? 'Generating...' : '✨ Generate Tasks'}
+              {isGenerating ? 'Generating...' : 'Generate Tasks'}
             </button>
             <button
               onClick={() => setIsAddingTask(!isAddingTask)}

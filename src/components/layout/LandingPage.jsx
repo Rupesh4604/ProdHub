@@ -1,6 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function LandingPage() {
+export default function LandingPage({ onStartDemo }) {
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState('');
+  const handleDemo = async () => {
+    setDemoError('');
+    setDemoLoading(true);
+    try {
+      await onStartDemo();
+    } catch (err) {
+      setDemoError(err.message);
+      setDemoLoading(false);
+    }
+  };
+
   const features = [
     {
       icon: '✅',
@@ -69,8 +82,8 @@ export default function LandingPage() {
           ProdHub
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <a href="https://my-productivity-hub-5a3ba.web.app/privacy.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Privacy</a>
-          <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Terms</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/privacy.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Privacy</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/terms.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>Terms</a>
         </div>
       </nav>
 
@@ -144,6 +157,32 @@ export default function LandingPage() {
         >
           Get Started Free →
         </a>
+        {onStartDemo && (
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={demoLoading}
+            style={{
+              display: 'inline-block',
+              marginLeft: '0.75rem',
+              marginTop: '0.75rem',
+              background: 'transparent',
+              color: '#e2e8f0',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '10px',
+              border: '1px solid #334155',
+              cursor: demoLoading ? 'wait' : 'pointer',
+              opacity: demoLoading ? 0.7 : 1,
+            }}
+          >
+            {demoLoading ? 'Loading demo…' : 'Try the demo — no sign-up'}
+          </button>
+        )}
+        {demoError && (
+          <p role="alert" style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '0.75rem' }}>{demoError}</p>
+        )}
       </section>
 
       {/* ── Features grid ── */}
@@ -254,8 +293,8 @@ export default function LandingPage() {
       >
         <p style={{ marginBottom: '0.4rem' }}>&copy; 2026 ProdHub — Open-source productivity for everyone.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem' }}>
-          <a href="https://my-productivity-hub-5a3ba.web.app/privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</a>
-          <a href="https://my-productivity-hub-5a3ba.web.app/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="https://prodhub.rupeshmediboyina.dev/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</a>
           <a href="https://github.com/Rupesh4604/ProdHub" target="_blank" rel="noopener noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>GitHub</a>
         </div>
       </footer>
