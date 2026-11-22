@@ -1,9 +1,6 @@
 import React, { useEffect } from 'react';
 
-/**
- * Confirms sign-out. Account deletion lives here as a secondary action so it is
- * available but never one click away from the sidebar.
- */
+/** Sign-out confirmation, with account deletion as a secondary link. */
 export default function SignOutModal({ isOpen, onClose, onConfirm, onDeleteAccount, isDemo = false }) {
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -24,16 +21,11 @@ export default function SignOutModal({ isOpen, onClose, onConfirm, onDeleteAccou
       aria-labelledby="sign-out-title"
       onClick={onClose}
     >
-      <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 id="sign-out-title" className="text-xl font-bold text-white mb-2">
-          {isDemo ? 'Exit the demo?' : 'Sign out?'}
+      <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xs mx-4 text-center" onClick={(e) => e.stopPropagation()}>
+        <h2 id="sign-out-title" className="text-xl font-bold text-white mb-6">
+          {isDemo ? 'Exit demo?' : 'Sign out?'}
         </h2>
-        <p className="text-gray-300 text-sm mb-6">
-          {isDemo
-            ? 'Demo changes are not saved once you exit. Use Save with Google first if you want to keep them.'
-            : 'You can sign back in at any time. Your data stays in your account.'}
-        </p>
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-center gap-3">
           <button
             onClick={onClose}
             autoFocus
@@ -49,15 +41,12 @@ export default function SignOutModal({ isOpen, onClose, onConfirm, onDeleteAccou
           </button>
         </div>
         {!isDemo && onDeleteAccount && (
-          <div className="mt-6 pt-4 border-t border-gray-700 flex items-center justify-between gap-3">
-            <span className="text-xs text-gray-400">Want to remove your account and all of its data?</span>
-            <button
-              onClick={onDeleteAccount}
-              className="text-xs font-semibold text-red-400 hover:text-red-300 whitespace-nowrap"
-            >
-              Delete account
-            </button>
-          </div>
+          <button
+            onClick={onDeleteAccount}
+            className="mt-5 text-xs font-semibold text-red-400 hover:text-red-300"
+          >
+            Delete account
+          </button>
         )}
       </div>
     </div>
