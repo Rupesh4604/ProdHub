@@ -64,7 +64,6 @@ ProdHub uses the Google Gemini API for smart, context-aware planning:
 | ![Scheduler](images/sheduler.png) | ![AI features](images/ai%20.png) | ![Chrome extension](images/chrome_extension.png) |
 
 > The live app signs you in with Google so each person's data stays private. These screenshots show it without signing in.
-> Planned features are listed in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
