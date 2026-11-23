@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { doc, updateDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
-import { Archive, ArchiveRestore, Calendar, Edit2, GripVertical, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Calendar, ChevronDown, ChevronRight, Edit2, GripVertical, Plus, Repeat, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
 import { appId, isGeminiConfigured } from '../../config/env';
 import { callGeminiWithRetry } from '../../services/geminiService';
@@ -10,6 +10,14 @@ import ConfirmModal from '../../components/modals/ConfirmModal';
 import AiContextModal from '../../components/modals/AiContextModal';
 import ProjectNotes from './ProjectNotes';
 import SortableTaskList from './SortableTaskList';
+
+// Firestore Timestamps, Dates, strings or missing values -> epoch millis.
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  const ts = new Date(value).getTime();
+  return Number.isFinite(ts) ? ts : 0;
+};
 
 export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -21,12 +29,27 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
   const [geminiError, setGeminiError] = useState('');
   const [showAiContextModal, setShowAiContextModal] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks');
+  const [showArchived, setShowArchived] = useState(false);
 
   const userId = auth?.currentUser?.uid;
+
+  // Every task in this project, archived or not (used for project deletion).
+  const projectTasks = useMemo(
+    () => allTasks.filter((t) => t.projectId === project.id),
+    [allTasks, project.id]
+  );
+  const archivedTasks = useMemo(
+    () =>
+      projectTasks
+        .filter((t) => t.archived)
+        .sort((a, b) => toMillis(b.archivedAt) - toMillis(a.archivedAt)),
+    [projectTasks]
+  );
+
   const tasks = useMemo(() => {
     const priorityOrderHigh = { High: 0, Medium: 1, Low: 2 };
     const priorityOrderLow = { Low: 0, Medium: 1, High: 2 };
-    const filtered = allTasks.filter((t) => t.projectId === project.id);
+    const filtered = projectTasks.filter((t) => !t.archived);
 
     if (sortMode === 'random') {
       const shuffle = (list) => {
@@ -69,19 +92,19 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     });
 
     return sorted;
-  }, [allTasks, project.id, sortMode]);
+  }, [projectTasks, sortMode]);
 
   // For manual (drag) mode: incomplete tasks ordered by persisted `order`
   // (draggable), and completed tasks shown below.
   const { manualIncomplete, manualCompleted } = useMemo(() => {
-    const projectTasks = allTasks.filter((t) => t.projectId === project.id);
+    const visible = projectTasks.filter((t) => !t.archived);
     const byOrder = (a, b) =>
       (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY);
     return {
-      manualIncomplete: projectTasks.filter((t) => !t.completed).sort(byOrder),
-      manualCompleted: projectTasks.filter((t) => t.completed).sort(byOrder),
+      manualIncomplete: visible.filter((t) => !t.completed).sort(byOrder),
+      manualCompleted: visible.filter((t) => t.completed).sort(byOrder),
     };
-  }, [allTasks, project.id]);
+  }, [projectTasks]);
 
   useEffect(() => {
     if (!userId || !project || !db) return;
@@ -128,7 +151,7 @@ export default function ProjectDetail({ project, allTasks, syncedEvents }) {
     if (!userId || !db) return;
     setShowDeleteModal(null);
     const batch = writeBatch(db);
-    for (const task of tasks) {
+    for (const task of projectTasks) {
       batch.delete(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id));
     }
     batch.delete(doc(db, `artifacts/${appId}/users/${userId}/projects`, project.id));
@@ -436,6 +459,23 @@ Based on the user's main instruction and the background context, generate a list
               tasks.map((task) => <TaskItem key={task.id} task={task} />)
             ) : (
               <p className="text-gray-400 text-center py-4">No tasks for this project yet. Try generating some with AI!</p>
+            )}
+          </div>
+        )}
+        {archivedTasks.length > 0 && (
+          <div className="mt-6 border-t border-gray-700/60 pt-4">
+            <button
+              onClick={() => setShowArchived((v) => !v)}
+              aria-expanded={showArchived}
+              className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-gray-200"
+            >
+              {showArchived ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              <Archive size={14} /> Archived ({archivedTasks.length})
+            </button>
+            {showArchived && (
+              <div className="space-y-3 mt-3 opacity-75">
+                {archivedTasks.map((task) => <TaskItem key={task.id} task={task} />)}
+              </div>
             )}
           </div>
         )}

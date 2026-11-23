@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Archive, Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Archive, Book, Calendar, CheckSquare, ChevronDown, ChevronRight, Edit2, LogOut, Plus, Repeat, Save, Search, Sparkles, Trash2, TrendingUp, X } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { appId } from '../../config/env';
@@ -7,6 +7,7 @@ import GoalPlannerModal from '../../components/modals/GoalPlannerModal';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
 import SignOutModal from '../../components/modals/SignOutModal';
+import SortableProjectList from './SortableProjectList';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
@@ -21,6 +22,18 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
   const [newProjectCustomType, setNewProjectCustomType] = useState('');
   const [newProjectDeadline, setNewProjectDeadline] = useState('');
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const addProjectFormRef = useRef(null);
+
+  // The form opens below the project list, often past the bottom of the
+  // sidebar. Bring it into view and focus the name field so the click has a
+  // visible result.
+  useEffect(() => {
+    if (!isAddingProject) return;
+    const form = addProjectFormRef.current;
+    if (!form) return;
+    form.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    form.querySelector('input')?.focus({ preventScroll: true });
+  }, [isAddingProject]);
 
   const handleNavigate = (view, id) => {
     setIsAddingProject(false);
@@ -61,6 +74,14 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
       }
       return acc;
     }, {});
+    // Saved drag order first; projects without one fall back to creation time.
+    const toMillis = (v) => (v && typeof v.toMillis === 'function' ? v.toMillis() : new Date(v || 0).getTime() || 0);
+    const byOrder = (a, b) =>
+      (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) ||
+      toMillis(a.createdAt) - toMillis(b.createdAt) ||
+      (a.name || '').localeCompare(b.name || '');
+    standalone.sort(byOrder);
+    Object.values(grouped).forEach((list) => list.sort(byOrder));
     return { standaloneProjects: standalone, goalProjects: grouped };
   }, [projects]);
 
@@ -68,7 +89,7 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
     <>
       <GoalPlannerModal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)} userId={userId} />
       <aside className="w-full h-full md:w-64 bg-gray-900/50 md:border-r border-gray-700/50 p-4 flex flex-col">
-        <div className="space-y-6 flex-1 overflow-y-auto no-scrollbar">
+        <div className="space-y-6 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
           <div className="hidden md:flex items-center justify-between">
             <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
               <Book size={24} /> ProdHub
@@ -140,32 +161,38 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
               {/* Bounded scroll area so the Add Project button stays in view
                   when there are many projects. */}
               <div className="max-h-[35vh] overflow-y-auto space-y-0.5 pr-1">
-                {standaloneProjects.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => handleNavigate('project', p.id)}
-                    className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
-                  >
-                    <span className="truncate" title={p.name}>{p.name}</span>
-                  </button>
-                ))}
+                <SortableProjectList
+                  projects={standaloneProjects}
+                  userId={userId}
+                  onOpen={(id) => handleNavigate('project', id)}
+                />
                 {standaloneProjects.length === 0 && (
                   <p className="px-3 py-1.5 text-xs text-gray-600">No standalone projects yet.</p>
                 )}
               </div>
               <button
                 onClick={() => setIsAddingProject(!isAddingProject)}
-                className="w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md text-blue-400 hover:bg-blue-900/50 transition-colors"
+                aria-expanded={isAddingProject}
+                className={`w-full flex items-center gap-3 px-3 py-2 mt-2 rounded-md transition-colors ${
+                  isAddingProject ? 'text-gray-400 hover:bg-gray-700/50' : 'text-blue-400 hover:bg-blue-900/50'
+                }`}
               >
-                <Plus size={20} /> Add Project
+                {isAddingProject ? <X size={20} /> : <Plus size={20} />}
+                {isAddingProject ? 'Cancel' : 'Add Project'}
               </button>
               {isAddingProject && (
-                <form onSubmit={handleAddProject} className="p-3 bg-gray-800 rounded-md mt-2 space-y-2">
+                <form
+                  ref={addProjectFormRef}
+                  onSubmit={handleAddProject}
+                  onKeyDown={(e) => e.key === 'Escape' && setIsAddingProject(false)}
+                  className="p-3 bg-gray-800 rounded-md mt-2 space-y-2 scroll-mb-4"
+                >
                   <input
                     type="text"
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="Project Name"
+                    aria-label="Project name"
                     className="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <select
@@ -198,9 +225,18 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
                       className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
                     />
                   </label>
-                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">
-                    Save
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-md py-1 text-sm font-semibold">
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingProject(false)}
+                      className="flex-1 bg-gray-700 hover:bg-gray-600 rounded-md py-1 text-sm font-semibold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </form>
               )}
             </div>
@@ -313,7 +349,7 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
             </button>
           </form>
         ) : (
-          <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 flex-grow text-left">
+          <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 flex-grow min-w-0 text-left">
             {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             <span className="font-semibold text-gray-200 truncate">{goal.name}</span>
           </button>
@@ -328,16 +364,12 @@ function GoalDropdown({ goal, projects, onViewChange, userId }) {
         </div>
       </div>
       {isOpen && (
-        <div className="pl-6 border-l-2 border-gray-700 ml-5 my-1">
-          {projects.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => onViewChange('project', p.id)}
-              className="w-full text-left flex items-center gap-3 px-3 py-1.5 rounded-md text-gray-300 hover:bg-gray-700/50 transition-colors truncate"
-            >
-              <span className="truncate" title={p.name}>{p.name}</span>
-            </button>
-          ))}
+        <div className="pl-3 border-l-2 border-gray-700 ml-5 my-1">
+          <SortableProjectList
+            projects={projects}
+            userId={userId}
+            onOpen={(id) => onViewChange('project', id)}
+          />
           {projects.length === 0 && <p className="px-3 py-1.5 text-xs text-gray-500">No projects yet.</p>}
         </div>
       )}
