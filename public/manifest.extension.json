@@ -1,6 +1,6 @@
 {
   "name": "ProdHub Chrome Extension",
-  "version": "1.0",
+  "version": "1.1",
   "manifest_version": 3,
   "description": "ProdHub – your all-in-one side-panel productivity hub. Manage tasks, habits, goals, and your schedule without ever leaving your current tab.",
   "background": {

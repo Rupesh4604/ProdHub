@@ -113,11 +113,6 @@ export default function ScheduleView({ projects, tasks, syncedEvents, setSyncedE
         </div>
       </div>
 
-      <p className="text-xs text-gray-500 -mt-2">
-        Read-only: ProdHub shows the title and start time of your upcoming Google Calendar events next to your task
-        deadlines. It never creates, edits or deletes calendar events.
-      </p>
-
       {lastSyncedAt && (
         <p className="text-xs text-gray-500 -mt-2">
           Calendar last synced {lastSyncedAt.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}

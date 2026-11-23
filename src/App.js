@@ -176,15 +176,16 @@ function HubApp({ user, isDemo, handleSignOut, onSaveDemo }) {
         [selectedProjectId, projects]
     );
 
-    // Archived projects (and their tasks) drop out of every overview; they stay
-    // reachable from the sidebar's Archived section.
+    // Archived projects (and their tasks) and individually archived tasks drop
+    // out of every overview; they stay reachable from the project page and the
+    // sidebar's Archived section.
     const { activeProjects, archivedProjects, activeTasks } = useMemo(() => {
         const archived = projects.filter((p) => p.archived);
         const archivedIds = new Set(archived.map((p) => p.id));
         return {
             activeProjects: projects.filter((p) => !p.archived),
             archivedProjects: archived,
-            activeTasks: tasks.filter((t) => !archivedIds.has(t.projectId)),
+            activeTasks: tasks.filter((t) => !t.archived && !archivedIds.has(t.projectId)),
         };
     }, [projects, tasks]);
 

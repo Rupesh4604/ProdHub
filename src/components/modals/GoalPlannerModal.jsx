@@ -73,12 +73,13 @@ The output must be a JSON object. For each project, provide a 'name' and a 'type
           const goalRef = doc(collection(db, `artifacts/${appId}/users/${userId}/goals`));
           batch.set(goalRef, { name: goal, createdAt: new Date() });
 
-          plan.projects.forEach((proj) => {
+          plan.projects.forEach((proj, index) => {
             const projectRef = doc(collection(db, `artifacts/${appId}/users/${userId}/projects`));
             batch.set(projectRef, {
               name: proj.name,
               type: proj.type,
               goalId: goalRef.id,
+              order: index,
               createdAt: new Date(),
               status: 'In Progress',
               progress: 0,

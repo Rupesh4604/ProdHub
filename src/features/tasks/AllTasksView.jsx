@@ -1,42 +1,95 @@
 import React, { useMemo, useState } from 'react';
 import { doc, writeBatch } from 'firebase/firestore';
-import { ListFilter, ArrowUpDown, CheckSquare, Check, RotateCcw, Trash2, X } from 'lucide-react';
+import { CheckSquare, Check, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import TaskItem from '../../components/shared/TaskItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import { auth, db } from '../../config/firebase';
 import { appId } from '../../config/env';
 
+const STATUS_OPTIONS = ['All', 'Active', 'Completed'];
+const PRIORITY_RANK = { High: 1, Medium: 2, Low: 3 };
+const NO_PROJECT = '__none__';
+
+const dueTime = (t) => {
+  const ts = t.dueDate ? Date.parse(t.dueDate) : NaN;
+  return Number.isFinite(ts) ? ts : Number.POSITIVE_INFINITY;
+};
+
+/** A compact labelled select that matches the dark toolbar. */
+function ToolbarSelect({ label, value, onChange, children }) {
+  return (
+    <label className="flex items-center gap-2 h-9 pl-3 pr-1 rounded-xl bg-gray-800/80 border border-gray-700/60 text-sm focus-within:ring-2 focus-within:ring-blue-500/50">
+      <span className="text-gray-500 flex-shrink-0">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-transparent text-gray-200 pr-1 py-1 focus:outline-none cursor-pointer max-w-[11rem] truncate"
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
 export default function AllTasksView({ tasks, projects }) {
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('dueDate');
+  const [search, setSearch] = useState('');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const userId = auth?.currentUser?.uid;
 
+  const projectNames = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
+  const hasUnassigned = useMemo(() => tasks.some((t) => !projectNames.has(t.projectId)), [tasks, projectNames]);
+
+  // Tasks matching search / project / priority, before the status filter, so
+  // the status counts reflect the other filters.
+  const scopedTasks = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return tasks.filter((t) => {
+      if (q && !(t.title || '').toLowerCase().includes(q)) return false;
+      if (projectFilter === NO_PROJECT && projectNames.has(t.projectId)) return false;
+      if (projectFilter !== 'all' && projectFilter !== NO_PROJECT && t.projectId !== projectFilter) return false;
+      if (priorityFilter !== 'all' && (t.priority || 'Medium') !== priorityFilter) return false;
+      return true;
+    });
+  }, [tasks, search, projectFilter, priorityFilter, projectNames]);
+
+  const statusCounts = useMemo(() => {
+    const completed = scopedTasks.filter((t) => t.completed).length;
+    return { All: scopedTasks.length, Active: scopedTasks.length - completed, Completed: completed };
+  }, [scopedTasks]);
+
   const filteredAndSortedTasks = useMemo(() => {
-    let filtered = tasks;
-    if (filter === 'Active') filtered = tasks.filter((t) => !t.completed);
-    if (filter === 'Completed') filtered = tasks.filter((t) => t.completed);
+    let filtered = scopedTasks;
+    if (filter === 'Active') filtered = scopedTasks.filter((t) => !t.completed);
+    if (filter === 'Completed') filtered = scopedTasks.filter((t) => t.completed);
+    const rank = (t) => PRIORITY_RANK[t.priority] ?? PRIORITY_RANK.Medium;
     return [...filtered].sort((a, b) => {
       // Always keep completed tasks below incomplete ones.
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      if (sortBy === 'dueDate')
-        return (a.dueDate ? new Date(a.dueDate) : new Date('2999-12-31')) -
-          (b.dueDate ? new Date(b.dueDate) : new Date('2999-12-31'));
-      if (sortBy === 'priority') {
-        const priorityOrder = { High: 1, Medium: 2, Low: 3 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
+      let cmp = 0;
+      if (sortBy === 'priority') cmp = rank(a) - rank(b);
       if (sortBy === 'project') {
-        const projectA = projects.find((p) => p.id === a.projectId)?.name || '';
-        const projectB = projects.find((p) => p.id === b.projectId)?.name || '';
-        return projectA.localeCompare(projectB);
+        cmp = (projectNames.get(a.projectId) || '').localeCompare(projectNames.get(b.projectId) || '');
       }
-      return 0;
+      // Due date is the primary sort, and the tie-breaker for the others.
+      return cmp || dueTime(a) - dueTime(b);
     });
-  }, [tasks, projects, filter, sortBy]);
+  }, [scopedTasks, projectNames, filter, sortBy]);
+
+  const filtersActive =
+    search.trim() !== '' || projectFilter !== 'all' || priorityFilter !== 'all' || filter !== 'All';
+  const clearFilters = () => {
+    setSearch('');
+    setProjectFilter('all');
+    setPriorityFilter('all');
+    setFilter('All');
+  };
 
   const visibleIds = filteredAndSortedTasks.map((t) => t.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
@@ -117,31 +170,70 @@ export default function AllTasksView({ tasks, projects }) {
         </button>
       </div>
 
-      {/* Filter & Sort bar */}
-      <div className="flex gap-2 p-3 bg-gray-800/40 border border-gray-700/40 rounded-2xl backdrop-blur-sm">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <ListFilter size={14} className="text-gray-500 flex-shrink-0" />
-          <select
-            onChange={(e) => setFilter(e.target.value)}
-            value={filter}
-            className="flex-1 min-w-0 bg-gray-700/80 border border-gray-600/50 rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-200"
+      {/* Toolbar: search, status, project, priority, sort */}
+      <div className="flex flex-col gap-3 p-3 bg-gray-800/40 border border-gray-700/40 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative flex-1 min-w-0">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tasks"
+              aria-label="Search tasks"
+              className="w-full h-9 pl-9 pr-3 rounded-xl bg-gray-800/80 border border-gray-700/60 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+          </div>
+          <div
+            role="group"
+            aria-label="Task status"
+            className="flex h-9 p-0.5 rounded-xl bg-gray-900/60 border border-gray-700/60 text-sm flex-shrink-0"
           >
-            <option>All</option>
-            <option>Active</option>
-            <option>Completed</option>
-          </select>
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option}
+                onClick={() => setFilter(option)}
+                aria-pressed={filter === option}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 rounded-lg font-medium transition-colors ${
+                  filter === option ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {option}
+                <span className={`text-xs tabular-nums ${filter === option ? 'text-gray-300' : 'text-gray-500'}`}>
+                  {statusCounts[option]}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <ArrowUpDown size={14} className="text-gray-500 flex-shrink-0" />
-          <select
-            onChange={(e) => setSortBy(e.target.value)}
-            value={sortBy}
-            className="flex-1 min-w-0 bg-gray-700/80 border border-gray-600/50 rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-200"
-          >
-            <option value="dueDate">Due Date</option>
-            <option value="priority">Priority</option>
-            <option value="project">Project</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ToolbarSelect label="Project" value={projectFilter} onChange={setProjectFilter}>
+            <option value="all" className="bg-gray-800">All</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-gray-800">{p.name}</option>
+            ))}
+            {hasUnassigned && <option value={NO_PROJECT} className="bg-gray-800">No project</option>}
+          </ToolbarSelect>
+          <ToolbarSelect label="Priority" value={priorityFilter} onChange={setPriorityFilter}>
+            <option value="all" className="bg-gray-800">All</option>
+            <option value="High" className="bg-gray-800">High</option>
+            <option value="Medium" className="bg-gray-800">Medium</option>
+            <option value="Low" className="bg-gray-800">Low</option>
+          </ToolbarSelect>
+          <ToolbarSelect label="Sort" value={sortBy} onChange={setSortBy}>
+            <option value="dueDate" className="bg-gray-800">Due date</option>
+            <option value="priority" className="bg-gray-800">Priority</option>
+            <option value="project" className="bg-gray-800">Project</option>
+          </ToolbarSelect>
+          <div className="flex-grow" />
+          <span className="text-xs text-gray-500 tabular-nums">
+            {filteredAndSortedTasks.length} {filteredAndSortedTasks.length === 1 ? 'task' : 'tasks'}
+          </span>
+          {filtersActive && (
+            <button onClick={clearFilters} className="text-xs font-medium text-blue-400 hover:text-blue-300">
+              Clear filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -186,10 +278,7 @@ export default function AllTasksView({ tasks, projects }) {
         {filteredAndSortedTasks.length > 0 ? (
           filteredAndSortedTasks.map((task) =>
             selectMode ? (
-              <label
-                key={task.id}
-                className="flex items-center gap-2.5 cursor-pointer rounded-2xl"
-              >
+              <label key={task.id} className="flex items-center gap-2.5 cursor-pointer rounded-2xl">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(task.id)}
@@ -205,7 +294,14 @@ export default function AllTasksView({ tasks, projects }) {
             )
           )
         ) : (
-          <p className="text-gray-500 text-sm text-center py-10">No tasks found.</p>
+          <div className="text-center py-10 space-y-2">
+            <p className="text-gray-500 text-sm">{filtersActive ? 'No tasks match these filters.' : 'No tasks yet.'}</p>
+            {filtersActive && (
+              <button onClick={clearFilters} className="text-sm font-medium text-blue-400 hover:text-blue-300">
+                Clear filters
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

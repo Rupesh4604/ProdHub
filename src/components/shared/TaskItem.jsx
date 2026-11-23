@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Edit2, Trash2, Book, Repeat } from 'lucide-react';
+import { Archive, ArchiveRestore, Calendar, Edit2, Trash2, Book, Repeat } from 'lucide-react';
 import { doc, updateDoc, deleteDoc, addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import { appId } from '../../config/env';
@@ -53,6 +53,16 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
       recurrence: editRecurrence,
     });
     setIsEditing(false);
+  };
+
+  // Archiving hides the task from its project's list and every overview without
+  // deleting it. Fully reversible from the project's Archived section.
+  const handleToggleArchive = async () => {
+    if (!userId || !db) return;
+    await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/tasks`, task.id), {
+      archived: !task.archived,
+      archivedAt: task.archived ? null : new Date(),
+    });
   };
 
   const handleDelete = async () => {
@@ -244,7 +254,7 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
               {projectName && (
                 <div className="flex items-center gap-1">
                   <Book size={11} />
-                  <span className="truncate max-w-[80px]">{projectName}</span>
+                  <span className="truncate max-w-[140px] sm:max-w-[260px]" title={projectName}>{projectName}</span>
                 </div>
               )}
             </div>
@@ -256,6 +266,14 @@ export default function TaskItem({ task, projects = [], isCompact = false }) {
               className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
             >
               <Edit2 size={13} />
+            </button>
+            <button
+              onClick={handleToggleArchive}
+              aria-label={task.archived ? 'Restore task' : 'Archive task'}
+              title={task.archived ? 'Restore task' : 'Archive task'}
+              className="p-1.5 text-gray-500 hover:text-amber-300 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              {task.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
             </button>
             <button
               onClick={() => setShowDeleteModal(true)}
