@@ -6,6 +6,7 @@ import { appId } from '../../config/env';
 import GoalPlannerModal from '../../components/modals/GoalPlannerModal';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
+import SignOutModal from '../../components/modals/SignOutModal';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
@@ -13,6 +14,7 @@ const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
 export default function Sidebar({ onViewChange, projects, archivedProjects = [], goals, userId, isDemo = false, handleSignOut, onOpenSearch }) {
   const [showArchived, setShowArchived] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showSignOut, setShowSignOut] = useState(false);
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('Course');
@@ -232,19 +234,24 @@ export default function Sidebar({ onViewChange, projects, archivedProjects = [],
           </nav>
         </div>
         <button
-          onClick={handleSignOut}
+          onClick={() => setShowSignOut(true)}
           className="w-full flex-shrink-0 flex items-center gap-3 px-3 py-2 rounded-md text-gray-400 hover:bg-red-900/50 hover:text-red-300 transition-colors mt-4"
         >
           <LogOut size={20} /> Sign Out
         </button>
-        {!isDemo && (
-          <button
-            onClick={() => setShowDeleteAccount(true)}
-            className="w-full flex-shrink-0 text-left px-3 py-1 text-xs text-gray-600 hover:text-red-400 transition-colors"
-          >
-            Delete account
-          </button>
-        )}
+        <SignOutModal
+          isOpen={showSignOut}
+          isDemo={isDemo}
+          onClose={() => setShowSignOut(false)}
+          onConfirm={() => {
+            setShowSignOut(false);
+            handleSignOut();
+          }}
+          onDeleteAccount={() => {
+            setShowSignOut(false);
+            setShowDeleteAccount(true);
+          }}
+        />
         <DeleteAccountModal isOpen={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       </aside>
     </>
