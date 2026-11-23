@@ -328,17 +328,6 @@ This project is fully containerized, allowing you to run it in a consistent and 
     Once the container is running, open your browser at [**http://localhost:3000**](http://localhost:3000).  
     To stop, press `Ctrl + C` in your terminal.
 
----
-
-**Start your journey with ProdHub today.**
-
-## Our Organization
-
-OpenSourceEnv is a dedicated initiative focused on democratizing access to high-quality education in various domains of technology. Our mission is to provide comprehensive resources that empower learners at all levels to master new skills and technologies. We are committed to fostering an inclusive learning environment where everyone can thrive.
-
-Community Page: [OpenSourceEnv Teamspace](https://www.notion.so/Teamspace-Home-913399bce8764b36ad8e928a0083af45)
-
-Github: https://github.com/openSourceEnv
 
 ## License
 
